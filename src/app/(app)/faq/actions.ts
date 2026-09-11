@@ -1,0 +1,76 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { createClient } from "@/lib/supabase/server";
+import { Constants, type Enums } from "@/types/database";
+
+export type AnswerFormState = { error?: string; ok?: boolean };
+
+function text(formData: FormData, key: string): string | null {
+  const value = String(formData.get(key) ?? "").trim();
+  return value === "" ? null : value;
+}
+
+export async function createAnswer(
+  _prev: AnswerFormState,
+  formData: FormData,
+): Promise<AnswerFormState> {
+  const question = text(formData, "question");
+  const answer = text(formData, "answer");
+  if (!question || !answer) return { error: "ต้องกรอกทั้งคำถามและคำตอบ" };
+
+  const raw = text(formData, "visibility") ?? "";
+  const visibility = (
+    Constants.public.Enums.answer_visibility as readonly string[]
+  ).includes(raw)
+    ? (raw as Enums<"answer_visibility">)
+    : "ตอบผู้สนใจได้";
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.from("answers").insert({
+    question,
+    answer,
+    visibility,
+    source: text(formData, "source"),
+    // คำตอบที่เพิ่งเขียนถือว่ายืนยันแล้ว ณ วันนี้
+    confirmed_at: new Date().toISOString(),
+    confirmed_by: user?.id ?? null,
+  });
+
+  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+  revalidatePath("/faq");
+  return { ok: true };
+}
+
+/** กดยืนยันว่าคำตอบนี้ยังถูกต้อง — อัปเดตวันที่และชื่อผู้ยืนยันโดยไม่ต้องพิมพ์ใหม่ */
+export async function confirmAnswer(
+  _prev: AnswerFormState,
+  formData: FormData,
+): Promise<AnswerFormState> {
+  const id = text(formData, "id");
+  if (!id) return { error: "ไม่พบคำตอบที่จะยืนยัน" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("answers")
+    .update({
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: user?.id ?? null,
+    })
+    .eq("id", id);
+
+  if (error) return { error: `ยืนยันไม่สำเร็จ: ${error.message}` };
+
+  revalidatePath("/faq");
+  return { ok: true };
+}
