@@ -291,6 +291,7 @@ export async function getPersonDetail(id: string) {
     .select(
       `id, full_name, nickname, phone, line_id, facebook_name, study_mode,
        prior_education, follow_up_status, enrollment_status, payment_status,
+       national_id_last4, credit_balance,
        enrollment_status_confirmed_at, payment_status_confirmed_at,
        next_call_at, note, first_contacted_at,
        faculties ( name ), programs ( name ), staff ( display_name )`,

@@ -241,9 +241,19 @@ export function DocumentChecklistPanel({
               </div>
 
               {item?.isSensitive ? (
-                <p className="text-muted-foreground mt-2 text-xs">
-                  เอกสารนี้อ่อนไหว การเปิดดูจะถูกบันทึกไว้
-                </p>
+                <div className="mt-2">
+                  {/* เบลอไว้ก่อน กันไม่ให้เลขบัตรคนอื่นค้างบนจอตอนมีคนเดินผ่าน */}
+                  <div
+                    aria-hidden
+                    data-testid={`blurred-${docType}`}
+                    className="bg-muted text-muted-foreground flex h-16 items-center justify-center rounded-md text-xs blur-[3px] select-none"
+                  >
+                    เอกสารอ่อนไหว
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    เอกสารนี้อ่อนไหว การเปิดดูจะถูกบันทึกไว้
+                  </p>
+                </div>
               ) : null}
             </li>
           );

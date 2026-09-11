@@ -54,6 +54,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </nav>
 
         <div className="mt-auto border-t p-3">
+          {staff.role === "admin" ? (
+            <Link
+              href="/access-log"
+              className="text-muted-foreground hover:text-foreground mb-2 block text-xs underline-offset-4 hover:underline"
+            >
+              ร่องรอยการเข้าถึง
+            </Link>
+          ) : null}
           <Link
             href="/master-data"
             className="text-muted-foreground hover:text-foreground mb-3 block text-xs underline-offset-4 hover:underline"

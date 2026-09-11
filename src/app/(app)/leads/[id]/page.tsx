@@ -10,6 +10,7 @@ import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
 import { MergeForm } from "./merge-form";
+import { NationalIdPanel } from "./national-id-panel";
 import { LogCallDialog } from "@/components/log-call-dialog";
 
 /** สถานะการเรียนและการเงินเป็นสำเนาจากหน่วยงานอื่น (ADR-0003) */
@@ -202,6 +203,11 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
                   {person.study_mode ? ` · ${person.study_mode}` : ""}
                 </dd>
               </div>
+              <NationalIdPanel
+                personId={person.id}
+                last4={person.national_id_last4}
+              />
+
               {person.note ? (
                 <div>
                   <dt className="text-muted-foreground text-xs">หมายเหตุ</dt>

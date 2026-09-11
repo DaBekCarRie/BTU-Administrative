@@ -17,6 +17,7 @@ import {
   type PriorEducation,
   type StudyMode,
 } from "@/lib/domain/events";
+import { readNationalId, setNationalId } from "@/lib/data/national-id";
 import { toDateInputValue } from "@/lib/date";
 import { normalizePhone } from "@/lib/phone";
 import { Constants } from "@/types/database";
@@ -203,4 +204,37 @@ export async function mergeLeads(
   revalidatePath("/leads");
   revalidatePath(`/leads/${survivorId}`);
   return { ok: true };
+}
+
+/** บันทึกเลขบัตรประชาชน — เข้ารหัสที่ฐานข้อมูล */
+export async function saveNationalId(
+  _prev: LeadFormState,
+  formData: FormData,
+): Promise<LeadFormState> {
+  const personId = text(formData, "personId");
+  if (!personId) return { error: "ไม่พบรายการ" };
+
+  try {
+    await setNationalId(personId, String(formData.get("nationalId") ?? ""));
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "บันทึกเลขบัตรไม่สำเร็จ",
+    };
+  }
+
+  revalidatePath(`/leads/${personId}`);
+  return { ok: true };
+}
+
+/** เปิดดูเลขบัตรประชาชนเต็ม — ฐานข้อมูลเขียน log ให้ทุกครั้งโดยเลี่ยงไม่ได้ */
+export async function revealNationalId(
+  personId: string,
+): Promise<{ value?: string | null; error?: string }> {
+  try {
+    return { value: await readNationalId(personId) };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "เปิดดูไม่สำเร็จ",
+    };
+  }
 }
