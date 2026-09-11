@@ -74,6 +74,11 @@ export async function recordEvent(
   return personId;
 }
 
+import {
+  PAGE_SIZE,
+  type PeopleFilters,
+} from "./people-filters";
+
 export type PersonListItem = {
   id: string;
   fullName: string;
@@ -87,20 +92,105 @@ export type PersonListItem = {
   lastEventAt: string;
 };
 
-/** รายชื่อผู้สนใจ — การค้นหาและตัวกรองเป็นเรื่องของใบ 04 */
-export async function listPeople(limit = 50): Promise<PersonListItem[]> {
+const LIST_COLUMNS = `id, full_name, phone, facebook_name, study_mode, follow_up_status, last_event_at,
+   faculties ( name ), programs ( name ), staff ( display_name )`;
+
+/**
+ * ค้นด้วยชื่อไทย ชื่อ Facebook หรือเบอร์ โดยพิมพ์ไม่ครบก็เจอ
+ * ใช้ ilike ที่วิ่งบน trigram index — ห้ามเปลี่ยนไปใช้ full-text search
+ * เพราะ Postgres ตัดคำไทยไม่ได้ ("ศิริ" จะไม่เจอ "ศิริพร")
+ */
+function escapeLike(term: string): string {
+  return term.replace(/[%_\\]/g, (match) => `\\${match}`);
+}
+
+function applyFilters<T extends { or: unknown; eq: unknown }>(
+  query: T,
+  filters: PeopleFilters,
+): T {
+  let next = query as unknown as {
+    or: (f: string) => typeof next;
+    eq: (c: string, v: string) => typeof next;
+  };
+
+  if (filters.q) {
+    const term = escapeLike(filters.q);
+    next = next.or(
+      `full_name.ilike.%${term}%,facebook_name.ilike.%${term}%,phone.ilike.%${term}%`,
+    );
+  }
+  if (filters.status) next = next.eq("follow_up_status", filters.status);
+  if (filters.facultyId) next = next.eq("faculty_id", filters.facultyId);
+  if (filters.studyMode) next = next.eq("study_mode", filters.studyMode);
+  if (filters.ownerId) next = next.eq("owner_id", filters.ownerId);
+
+  return next as unknown as T;
+}
+
+export type PeopleListResult = {
+  items: PersonListItem[];
+  total: number;
+  page: number;
+  pageCount: number;
+};
+
+/**
+ * รายชื่อผู้สนใจ — กรอง เรียง และแบ่งหน้าที่ฝั่งเซิร์ฟเวอร์ทั้งหมด
+ * ห้ามดึงทุกแถวมากรองในเบราว์เซอร์ ข้อมูลจริงมี 3,180 ราย
+ */
+export async function listPeople(
+  filters: PeopleFilters,
+): Promise<PeopleListResult> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("people")
-    .select(
-      `id, full_name, phone, facebook_name, study_mode, follow_up_status, last_event_at,
-       faculties ( name ), programs ( name ), staff ( display_name )`,
-    )
+  const from = (filters.page - 1) * PAGE_SIZE;
+
+  const query = applyFilters(
+    supabase.from("people").select(LIST_COLUMNS, { count: "exact" }),
+    filters,
+  )
+    .order("last_event_at", { ascending: false })
+    .range(from, from + PAGE_SIZE - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) throw new Error(`อ่านรายชื่อไม่สำเร็จ: ${error.message}`);
+
+  const total = count ?? 0;
+  return {
+    total,
+    page: filters.page,
+    pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    items: (data ?? []).map((row) => ({
+      id: row.id,
+      fullName: row.full_name,
+      phone: row.phone,
+      facebookName: row.facebook_name,
+      facultyName: row.faculties?.name ?? null,
+      programName: row.programs?.name ?? null,
+      studyMode: row.study_mode,
+      followUpStatus: row.follow_up_status,
+      ownerName: row.staff?.display_name ?? null,
+      lastEventAt: row.last_event_at,
+    })),
+  };
+}
+
+/** ผลลัพธ์ที่กรองอยู่ทั้งหมดสำหรับส่งออกไฟล์ — ไม่แบ่งหน้า */
+export async function listPeopleForExport(
+  filters: PeopleFilters,
+  limit = 5000,
+): Promise<PersonListItem[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await applyFilters(
+    supabase.from("people").select(LIST_COLUMNS),
+    filters,
+  )
     .order("last_event_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw new Error(`อ่านรายชื่อไม่สำเร็จ: ${error.message}`);
+  if (error) throw new Error(`ส่งออกไม่สำเร็จ: ${error.message}`);
 
   return (data ?? []).map((row) => ({
     id: row.id,
