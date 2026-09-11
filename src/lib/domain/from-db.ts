@@ -1,4 +1,10 @@
-import { CALL_OUTCOMES, type CallOutcome, type DomainEvent, type PersonDetails } from "./events";
+import {
+  CALL_OUTCOMES,
+  type CallOutcome,
+  type DomainEvent,
+  type PaymentStatus,
+  type PersonDetails,
+} from "./events";
 
 type RawEvent = {
   id: number;
@@ -86,6 +92,52 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
         occurredAt: row.occurred_at,
         sequence: row.id,
         payload: { reason, note: str(payload.note) },
+      };
+    }
+
+    case "ยื่นสมัคร": {
+      const applicationId = str(payload.applicationId);
+      const year = Number(payload.academicYear);
+      if (!applicationId || !Number.isFinite(year)) return null;
+      return {
+        type: "ยื่นสมัคร",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          applicationId,
+          academicYear: year,
+          facultyId: str(payload.facultyId),
+          programId: str(payload.programId),
+          studyMode: str(payload.studyMode) as PersonDetails["studyMode"],
+        },
+      };
+    }
+
+    case "ชำระเงิน": {
+      const applicationId = str(payload.applicationId);
+      const status = str(payload.paymentStatus);
+      if (!applicationId || !status) return null;
+      return {
+        type: "ชำระเงิน",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          applicationId,
+          amount: Number(payload.amount) || 0,
+          paymentStatus: status as PaymentStatus,
+        },
+      };
+    }
+
+    case "ได้รหัสนักศึกษา": {
+      const applicationId = str(payload.applicationId);
+      const studentCode = str(payload.studentCode);
+      if (!applicationId || !studentCode) return null;
+      return {
+        type: "ได้รหัสนักศึกษา",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { applicationId, studentCode },
       };
     }
 

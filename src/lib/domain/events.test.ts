@@ -393,3 +393,67 @@ describe("รวมข้อมูล", () => {
     expect(rebuildState(timeline).lastEventAt).toBe("2026-09-10T03:00:00.000Z");
   });
 });
+
+describe("การสมัคร ชำระเงิน รหัสนักศึกษา", () => {
+  const base = applyEvent(null, contacted);
+  const applicationId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+  it("ยื่นสมัครแล้วสถานะติดตามเป็น สมัครแล้ว และล้างวันนัดโทร", () => {
+    const scheduled = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome: "นัดโทรใหม่", nextCallAt: "2026-09-12T03:00:00.000Z" },
+    });
+
+    const applied = applyEvent(scheduled, {
+      type: "ยื่นสมัคร",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: { applicationId, academicYear: 2569 },
+    });
+
+    expect(applied.followUpStatus).toBe("สมัครแล้ว");
+    expect(applied.nextCallAt).toBeNull();
+  });
+
+  it("หลักสูตรที่สมัครจริงชนะสิ่งที่เคยบอกว่าสนใจ", () => {
+    const applied = applyEvent(base, {
+      type: "ยื่นสมัคร",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: {
+        applicationId,
+        academicYear: 2569,
+        programId: "99999999-9999-9999-9999-999999999999",
+      },
+    });
+
+    expect(applied.programId).toBe("99999999-9999-9999-9999-999999999999");
+  });
+
+  it("★ ADR-0002: รักษาสภาพ ต้องไม่เปลี่ยนสถานะการเรียน", () => {
+    const enrolled = applyEvent(base, {
+      type: "ได้รหัสนักศึกษา",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: { applicationId, studentCode: "6914112509" },
+    });
+    expect(enrolled.enrollmentStatus).toBe("เรียนอยู่");
+
+    const maintained = applyEvent(enrolled, {
+      type: "ชำระเงิน",
+      occurredAt: "2026-09-07T03:00:00.000Z",
+      payload: { applicationId, amount: 3000, paymentStatus: "รักษาสภาพ" },
+    });
+
+    expect(maintained.paymentStatus).toBe("รักษาสภาพ");
+    expect(maintained.enrollmentStatus).toBe("เรียนอยู่");
+  });
+
+  it("วันที่ยืนยันสถานะการเงินคือเวลาที่ฝ่ายการเงินแจ้ง ไม่ใช่เวลาที่กดบันทึก", () => {
+    const paid = applyEvent(base, {
+      type: "ชำระเงิน",
+      occurredAt: "2026-08-20T03:00:00.000Z",
+      payload: { applicationId, amount: 500, paymentStatus: "ผ่อนอยู่" },
+    });
+
+    expect(paid.paymentStatusConfirmedAt).toBe("2026-08-20T03:00:00.000Z");
+  });
+});

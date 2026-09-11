@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentChecklistPanel } from "@/components/document-checklist";
+import { listApplications } from "@/lib/data/applications";
 import { getChecklist } from "@/lib/data/documents";
+import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
 import { MergeForm } from "./merge-form";
 import { NationalIdPanel } from "./national-id-panel";
+import { ApplicationsPanel } from "./applications-panel";
 import { LogCallDialog } from "@/components/log-call-dialog";
 
 /** สถานะการเรียนและการเงินเป็นสำเนาจากหน่วยงานอื่น (ADR-0003) */
@@ -41,6 +44,12 @@ function CopiedStatus({
 function describe(type: string, payload: Record<string, unknown>): string {
   const note = typeof payload.note === "string" ? payload.note : "";
   switch (type) {
+    case "ยื่นสมัคร":
+      return `ปีการศึกษา ${payload.academicYear}`;
+    case "ชำระเงิน":
+      return `${Number(payload.amount).toLocaleString("th-TH")} บาท · ${payload.paymentStatus}`;
+    case "ได้รหัสนักศึกษา":
+      return `รหัส ${payload.studentCode}`;
     case "โทรตาม":
       return [payload.outcome, note].filter(Boolean).join(" · ");
     case "ปิดเคส":
@@ -56,11 +65,14 @@ function describe(type: string, payload: Record<string, unknown>): string {
 
 export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  const [person, timeline, checklist] = await Promise.all([
-    getPersonDetail(id),
-    listTimeline(id),
-    getChecklist(id),
-  ]);
+  const [person, timeline, checklist, applications, faculties] =
+    await Promise.all([
+      getPersonDetail(id),
+      listTimeline(id),
+      getChecklist(id),
+      listApplications(id),
+      listFacultiesWithPrograms({ activeOnly: true }),
+    ]);
 
   if (!person) notFound();
 
@@ -97,6 +109,13 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-8">
+        <ApplicationsPanel
+          personId={person.id}
+          applications={applications}
+          faculties={faculties}
+        />
+
         <section>
           <h2 className="mb-3 text-sm font-semibold">
             ประวัติการติดตาม
@@ -137,9 +156,10 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
             </ol>
           )}
         </section>
+        </div>
 
         <aside className="flex flex-col gap-5">
-          <div className="rounded-md border p-4">
+          <div className="rounded-md border p-4" data-testid="status-panel">
             <h2 className="mb-3 text-sm font-semibold">สถานะ</h2>
             <dl className="flex flex-col gap-3 text-sm">
               <div>

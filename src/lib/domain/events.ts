@@ -114,6 +114,32 @@ export type DomainEvent =
       payload: { reason: CloseReason; note?: string | null };
     })
   | (EventBase & {
+      type: "ยื่นสมัคร";
+      payload: {
+        applicationId: string;
+        academicYear: number;
+        facultyId?: string | null;
+        programId?: string | null;
+        studyMode?: StudyMode | null;
+      };
+    })
+  | (EventBase & {
+      type: "ชำระเงิน";
+      payload: {
+        applicationId: string;
+        amount: number;
+        /**
+         * สถานะการเงินที่ฝ่ายการเงินแจ้งมา — ทีมเป็นแค่คนบันทึกสำเนา (ADR-0003)
+         * ระบบคำนวณเองไม่ได้เพราะไม่รู้ยอดค่าเทอมที่แท้จริงของแต่ละหลักสูตร
+         */
+        paymentStatus: PaymentStatus;
+      };
+    })
+  | (EventBase & {
+      type: "ได้รหัสนักศึกษา";
+      payload: { applicationId: string; studentCode: string };
+    })
+  | (EventBase & {
       type: "รวมข้อมูล";
       payload: {
         mergedId: string;
@@ -266,6 +292,43 @@ export function applyEvent(
         ...state,
         followUpStatus: event.payload.reason,
         nextCallAt: null,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ยื่นสมัคร": {
+      if (!state) throw new Error("ยื่นสมัครให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        // สิ่งที่สมัครจริงชนะสิ่งที่เคยบอกว่าสนใจ
+        facultyId: event.payload.facultyId ?? state.facultyId,
+        programId: event.payload.programId ?? state.programId,
+        studyMode: event.payload.studyMode ?? state.studyMode,
+        followUpStatus: "สมัครแล้ว",
+        nextCallAt: null,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ชำระเงิน": {
+      if (!state) throw new Error("บันทึกการชำระให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        paymentStatus: event.payload.paymentStatus,
+        // ยืนยันล่าสุดคือตอนที่ฝ่ายการเงินแจ้งมา ไม่ใช่ตอนที่กดบันทึก
+        paymentStatusConfirmedAt: event.occurredAt,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ได้รหัสนักศึกษา": {
+      if (!state) throw new Error("บันทึกรหัสให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        // ได้รหัสจากสำนักทะเบียนแล้ว = เริ่มเป็นนักศึกษา
+        // นี่คือสัญญาณที่ใกล้ที่สุดที่ทีมมี เพราะทีมไม่เห็นระบบลงทะเบียนเรียนจริง
+        enrollmentStatus: "เรียนอยู่",
+        enrollmentStatusConfirmedAt: event.occurredAt,
         lastEventAt: later(state.lastEventAt, event.occurredAt),
       };
     }
