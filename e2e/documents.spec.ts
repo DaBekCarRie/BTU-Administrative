@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 const FIXTURE = "e2e/fixtures/doc.png";
 
 async function createPerson(page: import("@playwright/test").Page, name: string) {
@@ -14,7 +16,7 @@ async function createPerson(page: import("@playwright/test").Page, name: string)
 
 test.describe("เอกสารประจำตัว", () => {
   test("อัปโหลดแล้วเช็กลิสต์เปลี่ยน ตรวจผ่านแล้วนับเพิ่ม", async ({ page }) => {
-    await createPerson(page, `เอกสาร ${Date.now()}`);
+    await createPerson(page, uniqueName("เอกสาร"));
 
     await expect(page.getByTestId("doc-progress")).toHaveText("ผ่านแล้ว 0/4");
 
@@ -31,7 +33,7 @@ test.describe("เอกสารประจำตัว", () => {
   });
 
   test("ไม่ผ่านต้องบอกเหตุผล และเหตุผลแสดงให้คนรับงานต่อเห็น", async ({ page }) => {
-    await createPerson(page, `ไม่ผ่าน ${Date.now()}`);
+    await createPerson(page, uniqueName("ไม่ผ่าน"));
 
     await page.getByTestId("file-วุฒิการศึกษา").setInputFiles(FIXTURE);
     await expect(page.getByTestId("doc-วุฒิการศึกษา")).toContainText("ส่งแล้ว");
@@ -46,7 +48,7 @@ test.describe("เอกสารประจำตัว", () => {
   });
 
   test("สำเนาบัตรประชาชนบอกว่าการเปิดดูจะถูกบันทึก", async ({ page }) => {
-    await createPerson(page, `อ่อนไหว ${Date.now()}`);
+    await createPerson(page, uniqueName("อ่อนไหว"));
 
     await page.getByTestId("file-สำเนาบัตรประชาชน").setInputFiles(FIXTURE);
     const card = page.getByTestId("doc-สำเนาบัตรประชาชน");
@@ -62,7 +64,7 @@ test.describe("เอกสารประจำตัว", () => {
   });
 
   test("หน้าเอกสารแสดงคนที่ยังไม่ครบ", async ({ page }) => {
-    const name = `ค้างเอกสาร ${Date.now()}`;
+    const name = uniqueName("ค้างเอกสาร");
     await createPerson(page, name);
 
     await page.goto("/documents");

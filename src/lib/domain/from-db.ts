@@ -198,6 +198,31 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
       };
     }
 
+    case "ขอศูนย์สอบพิเศษ": {
+      const requestId = str(payload.requestId);
+      const centerName = str(payload.centerName);
+      const year = Number(payload.academicYear);
+      if (!requestId || !centerName || !Number.isFinite(year)) return null;
+      return {
+        type: "ขอศูนย์สอบพิเศษ",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { requestId, academicYear: year, centerName },
+      };
+    }
+
+    case "ถอนคำขอศูนย์สอบ": {
+      const requestId = str(payload.requestId);
+      const centerName = str(payload.centerName);
+      if (!requestId || !centerName) return null;
+      return {
+        type: "ถอนคำขอศูนย์สอบ",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { requestId, centerName },
+      };
+    }
+
     case "รวมข้อมูล": {
       const mergedId = str(payload.mergedId);
       if (!mergedId) return null;

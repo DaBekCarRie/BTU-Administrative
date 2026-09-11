@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentChecklistPanel } from "@/components/document-checklist";
 import { listApplications } from "@/lib/data/applications";
+import { listRequestsForPerson } from "@/lib/data/exams";
 import { getChecklist } from "@/lib/data/documents";
 import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
@@ -19,6 +20,7 @@ import {
   ConfirmStatusButton,
   EnrollmentPanel,
 } from "./enrollment-panel";
+import { ExamPanel } from "./exam-panel";
 import { LogCallDialog } from "@/components/log-call-dialog";
 
 /** สถานะการเรียนและการเงินเป็นสำเนาจากหน่วยงานอื่น (ADR-0003) */
@@ -69,6 +71,9 @@ function describe(type: string, payload: Record<string, unknown>): string {
       return `ไป ${payload.toAcademicYear}${payload.toTerm ? `/${payload.toTerm}` : ""}`;
     case "ยืนยันสถานะ":
       return `ยืนยันสถานะ${payload.dimension}`;
+    case "ขอศูนย์สอบพิเศษ":
+    case "ถอนคำขอศูนย์สอบ":
+      return `ศูนย์${payload.centerName}`;
     case "โทรตาม":
       return [payload.outcome, note].filter(Boolean).join(" · ");
     case "ปิดเคส":
@@ -84,13 +89,14 @@ function describe(type: string, payload: Record<string, unknown>): string {
 
 export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  const [person, timeline, checklist, applications, faculties] =
+  const [person, timeline, checklist, applications, faculties, examRequests] =
     await Promise.all([
       getPersonDetail(id),
       listTimeline(id),
       getChecklist(id),
       listApplications(id),
       listFacultiesWithPrograms({ activeOnly: true }),
+      listRequestsForPerson(id),
     ]);
 
   if (!person) notFound();
@@ -263,6 +269,8 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
             enrollmentStatus={person.enrollment_status}
             creditBalance={Number(person.credit_balance ?? 0)}
           />
+
+          <ExamPanel personId={person.id} requests={examRequests} />
 
           <DocumentChecklistPanel personId={person.id} checklist={checklist} />
 

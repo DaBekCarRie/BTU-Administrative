@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 
@@ -28,7 +30,7 @@ test.describe("คิวโทรวันนี้", () => {
   });
 
   test("นัดโทรพรุ่งนี้แล้ววันนี้ยังไม่ขึ้นคิว", async ({ page }) => {
-    const name = `คิวพรุ่งนี้ ${Date.now()}`;
+    const name = uniqueName("คิวพรุ่งนี้");
     await page.goto("/leads/new");
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
     await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
@@ -49,7 +51,7 @@ test.describe("คิวโทรวันนี้", () => {
   });
 
   test("คนที่นัดไว้วันนี้ขึ้นคิว พร้อมจำนวนครั้งและผลครั้งล่าสุด", async ({ page }) => {
-    const name = `คิววันนี้ ${Date.now()}`;
+    const name = uniqueName("คิววันนี้");
     const today = bangkokToday();
 
     await page.goto("/leads/new");
@@ -76,7 +78,7 @@ test.describe("คิวโทรวันนี้", () => {
   });
 
   test("ปิดเคสแล้วหายจากคิวทันที", async ({ page }) => {
-    const name = `คิวปิด ${Date.now()}`;
+    const name = uniqueName("คิวปิด");
     const today = bangkokToday();
 
     await page.goto("/leads/new");
@@ -106,7 +108,7 @@ test.describe("คิวโทรวันนี้", () => {
   });
 
   test("บันทึกผลโทรได้จากแถวในคิวโดยไม่ต้องเปิดหน้าใหม่", async ({ page }) => {
-    const name = `คิวบันทึก ${Date.now()}`;
+    const name = uniqueName("คิวบันทึก");
     const today = bangkokToday();
 
     await page.goto("/leads/new");

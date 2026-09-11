@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 
@@ -12,7 +14,7 @@ test.describe("เพิ่มผู้สนใจ", () => {
   });
 
   test("กรอกฟอร์มแล้วชื่อโผล่ในรายชื่อ", async ({ page }) => {
-    const name = `ทดสอบ ${Date.now()}`;
+    const name = uniqueName("ทดสอบ");
 
     await page.goto("/leads/new");
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
@@ -41,7 +43,7 @@ test.describe("เพิ่มผู้สนใจ", () => {
   });
 
   test("แก้ข้อมูลติดต่อแล้วบันทึกเป็นเหตุการณ์ ไม่ใช่เขียนทับ", async ({ page }) => {
-    const name = `แก้ไข ${Date.now()}`;
+    const name = uniqueName("แก้ไข");
 
     await page.goto("/leads/new");
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);

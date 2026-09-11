@@ -165,6 +165,14 @@ export type DomainEvent =
       payload: { dimension: StatusDimension };
     })
   | (EventBase & {
+      type: "ขอศูนย์สอบพิเศษ";
+      payload: { requestId: string; academicYear: number; centerName: string };
+    })
+  | (EventBase & {
+      type: "ถอนคำขอศูนย์สอบ";
+      payload: { requestId: string; centerName: string };
+    })
+  | (EventBase & {
       type: "รวมข้อมูล";
       payload: {
         mergedId: string;
@@ -415,6 +423,13 @@ export function applyEvent(
             : state.paymentStatusConfirmedAt,
         lastEventAt: later(state.lastEventAt, event.occurredAt),
       };
+    }
+
+    case "ขอศูนย์สอบพิเศษ":
+    case "ถอนคำขอศูนย์สอบ": {
+      if (!state) throw new Error("คำขอศูนย์สอบของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      // ไม่กระทบสถานะทั้งสามมิติ เป็นเรื่องการสอบล้วน ๆ
+      return { ...state, lastEventAt: later(state.lastEventAt, event.occurredAt) };
     }
 
     case "รวมข้อมูล": {

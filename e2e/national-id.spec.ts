@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 const ID = "1234567890123";
 
 async function createPerson(page: import("@playwright/test").Page, name: string) {
@@ -16,7 +18,7 @@ test.describe("เลขบัตรประชาชนและร่อง�
   test("บันทึกแล้วหน้าจอเห็นแค่ 4 ตัวท้าย กดแสดงถึงจะเห็นเลขเต็ม", async ({
     page,
   }) => {
-    await createPerson(page, `บัตร ${Date.now()}`);
+    await createPerson(page, uniqueName("บัตร"));
 
     await page.getByTestId("edit-national-id").click();
     await page.getByLabel("เลขบัตรประชาชน").fill(ID);
@@ -31,7 +33,7 @@ test.describe("เลขบัตรประชาชนและร่อง�
   });
 
   test("เลขไม่ครบ 13 หลักถูกปฏิเสธ", async ({ page }) => {
-    await createPerson(page, `บัตรสั้น ${Date.now()}`);
+    await createPerson(page, uniqueName("บัตรสั้น"));
 
     await page.getByTestId("edit-national-id").click();
     await page.getByLabel("เลขบัตรประชาชน").fill("123");
@@ -46,7 +48,7 @@ test.describe("เลขบัตรประชาชนและร่อง�
   });
 
   test("เปิดดู 1 ครั้ง เกิดร่องรอย 1 รายการ", async ({ page }) => {
-    const name = `ร่องรอย ${Date.now()}`;
+    const name = uniqueName("ร่องรอย");
     await createPerson(page, name);
 
     await page.getByTestId("edit-national-id").click();
@@ -76,7 +78,7 @@ test.describe("เลขบัตรประชาชนและร่อง�
   });
 
   test("สำเนาบัตรประชาชนถูกเบลอไว้จนกว่าจะกดแสดง", async ({ page }) => {
-    await createPerson(page, `เบลอ ${Date.now()}`);
+    await createPerson(page, uniqueName("เบลอ"));
 
     await page.getByTestId("file-สำเนาบัตรประชาชน").setInputFiles("e2e/fixtures/doc.png");
     await expect(page.getByTestId("blurred-สำเนาบัตรประชาชน")).toBeVisible();

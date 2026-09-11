@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 test.describe("คลังคำตอบ", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/faq");
@@ -31,7 +33,7 @@ test.describe("คลังคำตอบ", () => {
   });
 
   test("กดยืนยันแล้ววันที่และชื่อผู้ยืนยันอัปเดต", async ({ page }) => {
-    const question = `ยืนยันทดสอบ ${Date.now()}`;
+    const question = uniqueName("ยืนยันทดสอบ");
 
     await page.getByTestId("add-answer").click();
     const dialog = page.getByRole("dialog", { name: "เพิ่มคำถาม" });
@@ -67,7 +69,7 @@ test.describe("คลังคำตอบ", () => {
   });
 
   test("เพิ่มคำถามใหม่แล้วถือว่ายืนยันแล้ววันนี้", async ({ page }) => {
-    const question = `คำถามทดสอบ ${Date.now()}`;
+    const question = uniqueName("คำถามทดสอบ");
 
     await page.getByTestId("add-answer").click();
     // จำกัดขอบเขตไว้ในกล่อง เพราะชื่อ dialog เองก็ตรงกับคำว่า "เพิ่มคำถาม"

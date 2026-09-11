@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 async function createEnrolled(page: import("@playwright/test").Page, name: string) {
   await page.goto("/leads/new");
   await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
@@ -30,7 +32,7 @@ async function createEnrolled(page: import("@playwright/test").Page, name: strin
 
 test.describe("สถานะการเรียนและเครดิต", () => {
   test("ดรอปแล้วเกิดเครดิต และสถานะการเงินต้องไม่เปลี่ยน", async ({ page }) => {
-    await createEnrolled(page, `ดรอป ${Date.now()}`);
+    await createEnrolled(page, uniqueName("ดรอป"));
 
     await page.getByTestId("enrollment-ดรอป").click();
     const dialog = page.getByRole("dialog", { name: "ดรอป" });
@@ -51,7 +53,7 @@ test.describe("สถานะการเรียนและเครดิ�
   test("กลับมาเรียนแล้วสถานะกลับเป็นปกติ เครดิตถูกใช้ ประวัติดรอปยังอยู่", async ({
     page,
   }) => {
-    await createEnrolled(page, `กลับมา ${Date.now()}`);
+    await createEnrolled(page, uniqueName("กลับมา"));
 
     await page.getByTestId("enrollment-ดรอป").click();
     const dropDialog = page.getByRole("dialog", { name: "ดรอป" });
@@ -71,7 +73,7 @@ test.describe("สถานะการเรียนและเครดิ�
   });
 
   test("กดยืนยันสถานะแล้ววันที่ยืนยันอัปเดต โดยค่าไม่เปลี่ยน", async ({ page }) => {
-    await createEnrolled(page, `ยืนยัน ${Date.now()}`);
+    await createEnrolled(page, uniqueName("ยืนยัน"));
 
     await page.getByTestId("confirm-status-การเรียน").click();
 

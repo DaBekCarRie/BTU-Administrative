@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 
@@ -24,7 +26,7 @@ test.describe("บันทึกผลการโทรและไทม์�
 
 
   test("บันทึกผลโทรจบได้ใน 3 แตะ และสถานะเปลี่ยนตามผล", async ({ page }) => {
-    await createLead(page, `โทร ${Date.now()}`);
+    await createLead(page, uniqueName("โทร"));
 
     // แตะ 1: เปิด · แตะ 2: เลือกผล · แตะ 3: บันทึก
     await page.getByTestId(/^open-log-call-/).click();
@@ -36,7 +38,7 @@ test.describe("บันทึกผลการโทรและไทม์�
   });
 
   test("นัดโทรครั้งถัดไปแบบลัดได้", async ({ page }) => {
-    await createLead(page, `นัด ${Date.now()}`);
+    await createLead(page, uniqueName("นัด"));
 
     await page.getByTestId(/^open-log-call-/).click();
     await page.getByTestId("outcome-นัดโทรใหม่").click();
@@ -48,7 +50,7 @@ test.describe("บันทึกผลการโทรและไทม์�
   });
 
   test("บันทึกย้อนหลังได้ และไทม์ไลน์เรียงตามเวลาที่เกิดจริง", async ({ page }) => {
-    await createLead(page, `ย้อนหลัง ${Date.now()}`);
+    await createLead(page, uniqueName("ย้อนหลัง"));
 
     // ครั้งแรกบันทึกเป็นวันนี้
     await page.getByTestId(/^open-log-call-/).click();
@@ -71,7 +73,7 @@ test.describe("บันทึกผลการโทรและไทม์�
   });
 
   test("ปิดเคสแล้วสถานะเปลี่ยนและปุ่มปิดเคสหายไป", async ({ page }) => {
-    await createLead(page, `ปิด ${Date.now()}`);
+    await createLead(page, uniqueName("ปิด"));
 
     await page.getByTestId("close-ติดต่อไม่ได้").click();
 

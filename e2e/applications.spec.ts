@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { uniqueName } from "./helpers";
+
 async function createPerson(page: import("@playwright/test").Page, name: string) {
   await page.goto("/leads/new");
   await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
@@ -26,7 +28,7 @@ async function addApplication(
 
 test.describe("การสมัคร ชำระเงิน รหัสนักศึกษา", () => {
   test("ยื่นสมัครแล้วสถานะติดตามเป็น สมัครแล้ว และหลุดจากคิว", async ({ page }) => {
-    await createPerson(page, `สมัคร ${Date.now()}`);
+    await createPerson(page, uniqueName("สมัคร"));
     await addApplication(page, "2569");
 
     await expect(page.getByTestId("application-list")).toContainText("การจัดการ");
@@ -35,7 +37,7 @@ test.describe("การสมัคร ชำระเงิน รหัสน
   });
 
   test("คนเดียวสมัครได้หลายรอบ", async ({ page }) => {
-    await createPerson(page, `สมัครซ้ำ ${Date.now()}`);
+    await createPerson(page, uniqueName("สมัครซ้ำ"));
     await addApplication(page, "2568");
     await addApplication(page, "2569");
 
@@ -45,7 +47,7 @@ test.describe("การสมัคร ชำระเงิน รหัสน
   test("บันทึกการชำระแล้วยอดรวมและสถานะการเงินเปลี่ยน พร้อมวันที่ยืนยัน", async ({
     page,
   }) => {
-    await createPerson(page, `ชำระ ${Date.now()}`);
+    await createPerson(page, uniqueName("ชำระ"));
     await addApplication(page, "2569");
 
     await page.getByTestId(/^pay-/).click();
@@ -66,7 +68,7 @@ test.describe("การสมัคร ชำระเงิน รหัสน
   });
 
   test("รักษาสภาพต้องไม่ทำให้สถานะการเรียนเปลี่ยน", async ({ page }) => {
-    await createPerson(page, `รักษาสภาพ ${Date.now()}`);
+    await createPerson(page, uniqueName("รักษาสภาพ"));
     await addApplication(page, "2569");
 
     await page.getByTestId(/^pay-/).click();
@@ -83,7 +85,7 @@ test.describe("การสมัคร ชำระเงิน รหัสน
   });
 
   test("บันทึกรหัสนักศึกษาแล้วสถานะการเรียนเป็น เรียนอยู่", async ({ page }) => {
-    await createPerson(page, `รหัส ${Date.now()}`);
+    await createPerson(page, uniqueName("รหัส"));
     await addApplication(page, "2569");
 
     const code = `69${String(Date.now()).slice(-8)}`;
