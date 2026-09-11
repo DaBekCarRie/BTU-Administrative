@@ -31,15 +31,17 @@ test.describe("เข้าสู่ระบบ", () => {
     await expect(page).toHaveURL(/\/queue/);
     await expect(page.getByTestId("current-user")).toBeVisible();
 
-    // เมนูครบ 5 หน้า
+    // เมนูครบทุกหน้า — จำกัดขอบเขตไว้ใน sidebar เพราะกระดานงานก็มีลิงก์ชื่อเดียวกัน
+    const nav = page.locator("aside nav");
     for (const label of [
       "คิวโทรวันนี้",
       "ผู้สนใจ",
       "ผู้เรียน",
       "เอกสาร",
+      "ศูนย์สอบพิเศษ",
       "คำถามที่พบบ่อย",
     ]) {
-      await expect(page.getByRole("link", { name: label })).toBeVisible();
+      await expect(nav.getByRole("link", { name: label })).toBeVisible();
     }
 
     await page.getByRole("button", { name: "ออกจากระบบ" }).click();

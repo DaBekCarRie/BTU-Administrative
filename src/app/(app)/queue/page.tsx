@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { LogCallDialog } from "@/components/log-call-dialog";
-import { getCallQueue, countStale, type QueueItem } from "@/lib/data/call-queue";
+import { getCallQueue, type QueueItem } from "@/lib/data/call-queue";
+import { getWorkBoard, THRESHOLDS } from "@/lib/data/work-board";
 import { daysOverdue, formatThaiDate } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
 
@@ -105,8 +106,42 @@ function QueueTable({
   );
 }
 
+/**
+ * ตัวเลขงานค้าง — กดแล้วไปหน้ารายชื่อที่กรองไว้แล้ว ไม่ใช่แค่ดูเฉย ๆ
+ * ไม่มีตัวเลขแยกรายบุคคลของเจ้าหน้าที่ที่ไหนบนหน้านี้ ทีมตัดสินใจไม่ทำเรื่องวัดผลคน
+ */
+function WorkTile({
+  label,
+  value,
+  href,
+  hint,
+  urgent,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  hint?: string;
+  urgent?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      data-testid={`tile-${label}`}
+      className="hover:bg-accent flex flex-col gap-0.5 rounded-md border px-4 py-3 transition-colors"
+    >
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span
+        className={`text-2xl tabular-nums ${urgent && value > 0 ? "text-destructive" : ""}`}
+      >
+        {value.toLocaleString("th-TH")}
+      </span>
+      {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
+    </Link>
+  );
+}
+
 export default async function QueuePage() {
-  const [queue, stale] = await Promise.all([getCallQueue(), countStale(7)]);
+  const [queue, board] = await Promise.all([getCallQueue(), getWorkBoard()]);
   const shown = queue.overdue.length + queue.today.length;
   const total = queue.total;
 
@@ -118,12 +153,49 @@ export default async function QueuePage() {
           ต้องโทร {total.toLocaleString("th-TH")} คน
           {queue.truncated ? ` (แสดง ${shown} รายแรก)` : ""}
           {queue.overdue.length > 0 ? ` · เลยกำหนด ${queue.overdue.length}` : ""}
-          {" · "}
-          <Link href="/leads" className="underline underline-offset-4">
-            ไม่มีใครแตะเกิน 7 วัน {stale} คน
-          </Link>
         </p>
       </header>
+
+      <section
+        className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        data-testid="work-board"
+      >
+        <WorkTile
+          label="ไม่มีใครแตะ"
+          value={board.staleLeads}
+          href="/leads?status=กำลังติดตาม"
+          hint={`เกิน ${THRESHOLDS.staleLeadDays} วัน`}
+          urgent
+        />
+        <WorkTile
+          label="รอรหัสนักศึกษา"
+          value={board.awaitingStudentCode}
+          href="/leads?status=สมัครแล้ว"
+          hint={`ชำระแล้วเกิน ${THRESHOLDS.awaitingStudentCodeDays} วัน`}
+          urgent
+        />
+        <WorkTile
+          label="เอกสารไม่ครบ"
+          value={board.incompleteDocuments}
+          href="/documents"
+          hint={`ตรวจผ่านไม่ถึง ${4} ประเภท`}
+        />
+        <WorkTile
+          label="คิวโทรวันนี้"
+          value={total}
+          href="/queue"
+          hint={queue.overdue.length > 0 ? `เลยกำหนด ${queue.overdue.length}` : undefined}
+        />
+      </section>
+
+      <p
+        className="text-muted-foreground mb-6 text-sm tabular-nums"
+        data-testid="totals-strip"
+      >
+        เดือนนี้สมัคร {board.appliedThisMonth.toLocaleString("th-TH")} ·
+        เรียนอยู่ {board.enrolled.toLocaleString("th-TH")} ·
+        ดรอป {board.dropped.toLocaleString("th-TH")}
+      </p>
 
       {shown === 0 ? (
         <div className="rounded-md border border-dashed p-10 text-center">
