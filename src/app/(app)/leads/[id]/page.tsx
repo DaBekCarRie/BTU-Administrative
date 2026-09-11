@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DocumentChecklistPanel } from "@/components/document-checklist";
+import { getChecklist } from "@/lib/data/documents";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
@@ -53,9 +55,10 @@ function describe(type: string, payload: Record<string, unknown>): string {
 
 export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  const [person, timeline] = await Promise.all([
+  const [person, timeline, checklist] = await Promise.all([
     getPersonDetail(id),
     listTimeline(id),
+    getChecklist(id),
   ]);
 
   if (!person) notFound();
@@ -207,6 +210,8 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
               ) : null}
             </dl>
           </div>
+
+          <DocumentChecklistPanel personId={person.id} checklist={checklist} />
 
           <MergeForm personId={person.id} phone={person.phone} />
 
