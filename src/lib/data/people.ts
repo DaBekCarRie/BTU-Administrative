@@ -33,6 +33,7 @@ function toState(row: PeopleRow): PersonState {
     enrollmentStatusConfirmedAt: row.enrollment_status_confirmed_at,
     paymentStatusConfirmedAt: row.payment_status_confirmed_at,
     nextCallAt: row.next_call_at,
+    creditBalance: Number(row.credit_balance ?? 0),
     firstContactedAt: row.first_contacted_at,
     lastEventAt: row.last_event_at,
   };

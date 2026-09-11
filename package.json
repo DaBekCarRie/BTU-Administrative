@@ -14,8 +14,8 @@
     "e2e": "playwright test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:rebuild": "node scripts/rebuild-people.mts",
-    "db:verify": "node scripts/rebuild-people.mts --check"
+    "db:rebuild": "tsx scripts/rebuild-people.mts",
+    "db:verify": "tsx scripts/rebuild-people.mts --check"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -55,6 +55,7 @@
     "server-only": "^0.0.1",
     "supabase": "^2.117.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^5.0.0"
   }

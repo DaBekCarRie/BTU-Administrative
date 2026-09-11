@@ -141,6 +141,63 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
       };
     }
 
+    case "ย้ายเทอม": {
+      const year = Number(payload.toAcademicYear);
+      if (!Number.isFinite(year)) return null;
+      return {
+        type: "ย้ายเทอม",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          toAcademicYear: year,
+          toTerm: Number(payload.toTerm) || null,
+          note: str(payload.note),
+        },
+      };
+    }
+
+    case "ดรอป": {
+      return {
+        type: "ดรอป",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          reason: str(payload.reason) ?? "",
+          creditAmount:
+            payload.creditAmount === undefined || payload.creditAmount === null
+              ? null
+              : Number(payload.creditAmount),
+        },
+      };
+    }
+
+    case "กลับมาเรียน":
+      return {
+        type: "กลับมาเรียน",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { note: str(payload.note) },
+      };
+
+    case "ลาออก":
+      return {
+        type: "ลาออก",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { reason: str(payload.reason) },
+      };
+
+    case "ยืนยันสถานะ": {
+      const dimension = str(payload.dimension);
+      if (dimension !== "การเรียน" && dimension !== "การเงิน") return null;
+      return {
+        type: "ยืนยันสถานะ",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { dimension },
+      };
+    }
+
     case "รวมข้อมูล": {
       const mergedId = str(payload.mergedId);
       if (!mergedId) return null;

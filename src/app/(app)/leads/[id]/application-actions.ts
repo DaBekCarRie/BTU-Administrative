@@ -149,3 +149,87 @@ export async function saveStudentCode(
   revalidatePath(`/leads/${personId}`);
   return { ok: true };
 }
+
+/** ดรอป ย้ายเทอม กลับมาเรียน ลาออก — สถานะการเรียนล้วน ไม่แตะสถานะการเงิน */
+export async function recordEnrollmentChange(
+  _prev: AppFormState,
+  formData: FormData,
+): Promise<AppFormState> {
+  const personId = text(formData, "personId");
+  const kind = text(formData, "kind");
+  if (!personId) return { error: "ไม่พบรายการ" };
+
+  const occurredAt = new Date().toISOString();
+
+  switch (kind) {
+    case "ดรอป": {
+      const reason = text(formData, "reason");
+      if (!reason) return { error: "ต้องบอกเหตุผลที่ดรอป" };
+      const credit = text(formData, "creditAmount");
+      await recordEvent(personId, {
+        type: "ดรอป",
+        occurredAt,
+        payload: {
+          reason,
+          creditAmount: credit === null ? null : Number(credit),
+        },
+      });
+      break;
+    }
+    case "กลับมาเรียน":
+      await recordEvent(personId, {
+        type: "กลับมาเรียน",
+        occurredAt,
+        payload: { note: text(formData, "note") },
+      });
+      break;
+    case "ลาออก":
+      await recordEvent(personId, {
+        type: "ลาออก",
+        occurredAt,
+        payload: { reason: text(formData, "reason") },
+      });
+      break;
+    case "ย้ายเทอม": {
+      const year = Number(text(formData, "toAcademicYear"));
+      if (!Number.isInteger(year)) return { error: "ต้องระบุปีการศึกษาที่ย้ายไป" };
+      await recordEvent(personId, {
+        type: "ย้ายเทอม",
+        occurredAt,
+        payload: {
+          toAcademicYear: year,
+          toTerm: Number(text(formData, "toTerm")) || null,
+          note: text(formData, "note"),
+        },
+      });
+      break;
+    }
+    default:
+      return { error: "ไม่รู้จักการเปลี่ยนสถานะนี้" };
+  }
+
+  revalidatePath(`/leads/${personId}`);
+  return { ok: true };
+}
+
+/** ยืนยันว่าสถานะที่เป็นสำเนายังถูกต้อง — เปลี่ยนแค่ "รู้ล่าสุดเมื่อไหร่" (ADR-0003) */
+export async function confirmStatus(
+  _prev: AppFormState,
+  formData: FormData,
+): Promise<AppFormState> {
+  const personId = text(formData, "personId");
+  const dimension = text(formData, "dimension");
+  if (!personId) return { error: "ไม่พบรายการ" };
+  if (dimension !== "การเรียน" && dimension !== "การเงิน") {
+    return { error: "ไม่รู้จักมิตินี้" };
+  }
+
+  await recordEvent(personId, {
+    type: "ยืนยันสถานะ",
+    occurredAt: new Date().toISOString(),
+    payload: { dimension },
+  });
+
+  revalidatePath(`/leads/${personId}`);
+  return { ok: true };
+}

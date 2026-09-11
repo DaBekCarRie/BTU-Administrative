@@ -9,20 +9,27 @@ import { getChecklist } from "@/lib/data/documents";
 import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
+import type { StatusDimension } from "@/lib/domain/events";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
 import { MergeForm } from "./merge-form";
 import { NationalIdPanel } from "./national-id-panel";
 import { ApplicationsPanel } from "./applications-panel";
+import {
+  ConfirmStatusButton,
+  EnrollmentPanel,
+} from "./enrollment-panel";
 import { LogCallDialog } from "@/components/log-call-dialog";
 
 /** สถานะการเรียนและการเงินเป็นสำเนาจากหน่วยงานอื่น (ADR-0003) */
 function CopiedStatus({
+  personId,
   label,
   value,
   confirmedAt,
 }: {
-  label: string;
+  personId: string;
+  label: StatusDimension;
   value: string;
   confirmedAt: string | null;
 }) {
@@ -36,6 +43,7 @@ function CopiedStatus({
             ? `ยืนยันล่าสุด ${fromNowThai(confirmedAt)}`
             : "ยังไม่เคยยืนยัน"}
         </span>
+        <ConfirmStatusButton personId={personId} dimension={label} />
       </dd>
     </div>
   );
@@ -50,6 +58,17 @@ function describe(type: string, payload: Record<string, unknown>): string {
       return `${Number(payload.amount).toLocaleString("th-TH")} บาท · ${payload.paymentStatus}`;
     case "ได้รหัสนักศึกษา":
       return `รหัส ${payload.studentCode}`;
+    case "ดรอป":
+      return [
+        `เหตุผล: ${payload.reason}`,
+        payload.creditAmount ? `เครดิต ${payload.creditAmount} บาท` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    case "ย้ายเทอม":
+      return `ไป ${payload.toAcademicYear}${payload.toTerm ? `/${payload.toTerm}` : ""}`;
+    case "ยืนยันสถานะ":
+      return `ยืนยันสถานะ${payload.dimension}`;
     case "โทรตาม":
       return [payload.outcome, note].filter(Boolean).join(" · ");
     case "ปิดเคส":
@@ -176,11 +195,13 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
                 </dd>
               </div>
               <CopiedStatus
+                personId={person.id}
                 label="การเรียน"
                 value={person.enrollment_status}
                 confirmedAt={person.enrollment_status_confirmed_at}
               />
               <CopiedStatus
+                personId={person.id}
                 label="การเงิน"
                 value={person.payment_status}
                 confirmedAt={person.payment_status_confirmed_at}
@@ -236,6 +257,12 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
               ) : null}
             </dl>
           </div>
+
+          <EnrollmentPanel
+            personId={person.id}
+            enrollmentStatus={person.enrollment_status}
+            creditBalance={Number(person.credit_balance ?? 0)}
+          />
 
           <DocumentChecklistPanel personId={person.id} checklist={checklist} />
 

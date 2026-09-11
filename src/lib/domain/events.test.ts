@@ -457,3 +457,134 @@ describe("การสมัคร ชำระเงิน รหัสนั�
     expect(paid.paymentStatusConfirmedAt).toBe("2026-08-20T03:00:00.000Z");
   });
 });
+
+describe("สถานะการเรียนและเครดิต", () => {
+  const applicationId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+  const enrolled = (() => {
+    const base = applyEvent(null, contacted);
+    const paid = applyEvent(base, {
+      type: "ชำระเงิน",
+      occurredAt: "2026-09-02T03:00:00.000Z",
+      payload: { applicationId, amount: 26900, paymentStatus: "ชำระครบ" },
+    });
+    return applyEvent(paid, {
+      type: "ได้รหัสนักศึกษา",
+      occurredAt: "2026-09-03T03:00:00.000Z",
+      payload: { applicationId, studentCode: "6961511427" },
+    });
+  })();
+
+  it("★ ADR-0002: ดรอป ต้องไม่เปลี่ยนสถานะการเงิน", () => {
+    const dropped = applyEvent(enrolled, {
+      type: "ดรอป",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: { reason: "ผ่าตัดหัวใจ", creditAmount: 26900 },
+    });
+
+    expect(dropped.enrollmentStatus).toBe("ดรอป");
+    // จ่ายครบแล้วแต่ดรอป — สถานะการเงินต้องยังเป็นชำระครบ
+    expect(dropped.paymentStatus).toBe("ชำระครบ");
+  });
+
+  it("ดรอปแล้วเกิดเครดิต กลับมาเรียนแล้วเครดิตถูกใช้", () => {
+    const dropped = applyEvent(enrolled, {
+      type: "ดรอป",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: { reason: "ผ่าตัดหัวใจ", creditAmount: 26900 },
+    });
+    expect(dropped.creditBalance).toBe(26900);
+
+    const returned = applyEvent(dropped, {
+      type: "กลับมาเรียน",
+      occurredAt: "2027-01-10T03:00:00.000Z",
+      payload: {},
+    });
+
+    expect(returned.enrollmentStatus).toBe("เรียนอยู่");
+    expect(returned.creditBalance).toBe(0);
+  });
+
+  it("ประวัติดรอปยังอยู่ในเหตุการณ์ แม้กลับมาเรียนแล้ว", () => {
+    const timeline: DomainEvent[] = [
+      contacted,
+      {
+        type: "ดรอป",
+        occurredAt: "2026-09-06T03:00:00.000Z",
+        sequence: 2,
+        payload: { reason: "ผ่าตัดหัวใจ", creditAmount: 3000 },
+      },
+      {
+        type: "กลับมาเรียน",
+        occurredAt: "2027-01-10T03:00:00.000Z",
+        sequence: 3,
+        payload: {},
+      },
+    ];
+
+    expect(rebuildState(timeline).enrollmentStatus).toBe("เรียนอยู่");
+    expect(timeline.filter((e) => e.type === "ดรอป")).toHaveLength(1);
+  });
+
+  it("ย้ายเทอมไม่แตะสถานะทั้งสามมิติ", () => {
+    const moved = applyEvent(enrolled, {
+      type: "ย้ายเทอม",
+      occurredAt: "2026-09-08T03:00:00.000Z",
+      payload: { toAcademicYear: 2569, toTerm: 2 },
+    });
+
+    expect(moved.enrollmentStatus).toBe(enrolled.enrollmentStatus);
+    expect(moved.paymentStatus).toBe(enrolled.paymentStatus);
+    expect(moved.followUpStatus).toBe(enrolled.followUpStatus);
+  });
+
+  it("ยืนยันสถานะเปลี่ยนแค่วันที่ยืนยัน ไม่เปลี่ยนค่า", () => {
+    const confirmed = applyEvent(enrolled, {
+      type: "ยืนยันสถานะ",
+      occurredAt: "2026-12-01T03:00:00.000Z",
+      payload: { dimension: "การเรียน" },
+    });
+
+    expect(confirmed.enrollmentStatus).toBe(enrolled.enrollmentStatus);
+    expect(confirmed.enrollmentStatusConfirmedAt).toBe("2026-12-01T03:00:00.000Z");
+    // ยืนยันมิติเดียว อีกมิติต้องไม่ขยับ
+    expect(confirmed.paymentStatusConfirmedAt).toBe(
+      enrolled.paymentStatusConfirmedAt,
+    );
+  });
+});
+
+describe("เหตุการณ์ย้อนหลังไปก่อนวันที่ติดต่อเข้ามา", () => {
+  /**
+   * เกิดขึ้นจริง: เจ้าหน้าที่บันทึกผลโทรย้อนหลังไปไกลกว่าวันที่บันทึกคนเข้าระบบ
+   * ถ้าเรียงตามเวลาล้วน ๆ แล้วเล่นซ้ำ จะพังเพราะยังไม่มีสถานะให้ใส่
+   */
+  it("ยังสร้างสถานะได้ และนับวันติดต่อครั้งแรกจากเหตุการณ์ที่เก่าที่สุด", () => {
+    const timeline: DomainEvent[] = [
+      { ...contacted, occurredAt: "2026-09-01T03:00:00.000Z", sequence: 1 },
+      {
+        type: "โทรตาม",
+        occurredAt: "2025-01-15T05:00:00.000Z",
+        sequence: 2,
+        payload: { outcome: "ขอคิดดูก่อน" },
+      },
+    ];
+
+    const state = rebuildState(timeline);
+
+    expect(state.fullName).toBe("สมฤดี ทักขินัย");
+    expect(state.followUpStatus).toBe("กำลังติดตาม");
+  });
+
+  it("ไม่มี ติดต่อเข้ามา เลย ต้องโยน error ที่อ่านรู้เรื่อง", () => {
+    expect(() =>
+      rebuildState([
+        {
+          type: "โทรตาม",
+          occurredAt: "2026-09-05T03:00:00.000Z",
+          payload: { outcome: "ไม่รับสาย" },
+        },
+      ]),
+    ).toThrow("ติดต่อเข้ามา");
+  });
+});

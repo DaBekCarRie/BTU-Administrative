@@ -55,6 +55,9 @@ export type PersonDetails = {
   note: string | null;
 };
 
+export const STATUS_DIMENSIONS = ["การเรียน", "การเงิน"] as const;
+export type StatusDimension = (typeof STATUS_DIMENSIONS)[number];
+
 export type PersonState = PersonDetails & {
   followUpStatus: FollowUpStatus;
   enrollmentStatus: EnrollmentStatus;
@@ -63,6 +66,8 @@ export type PersonState = PersonDetails & {
   enrollmentStatusConfirmedAt: string | null;
   paymentStatusConfirmedAt: string | null;
   nextCallAt: string | null;
+  /** เงินที่ชำระแล้วแต่ยังไม่ถูกใช้ เกิดจากการดรอปหรือย้ายเทอม — ไม่มีการคืนเงิน */
+  creditBalance: number;
   firstContactedAt: string;
   lastEventAt: string;
 };
@@ -138,6 +143,26 @@ export type DomainEvent =
   | (EventBase & {
       type: "ได้รหัสนักศึกษา";
       payload: { applicationId: string; studentCode: string };
+    })
+  | (EventBase & {
+      type: "ย้ายเทอม";
+      payload: { toAcademicYear: number; toTerm?: number | null; note?: string | null };
+    })
+  | (EventBase & {
+      type: "ดรอป";
+      payload: { reason: string; creditAmount?: number | null };
+    })
+  | (EventBase & {
+      type: "กลับมาเรียน";
+      payload: { note?: string | null };
+    })
+  | (EventBase & {
+      type: "ลาออก";
+      payload: { reason?: string | null };
+    })
+  | (EventBase & {
+      type: "ยืนยันสถานะ";
+      payload: { dimension: StatusDimension };
     })
   | (EventBase & {
       type: "รวมข้อมูล";
@@ -247,6 +272,7 @@ export function applyEvent(
         enrollmentStatusConfirmedAt: null,
         paymentStatusConfirmedAt: null,
         nextCallAt: null,
+        creditBalance: 0,
         firstContactedAt: event.occurredAt,
         lastEventAt: event.occurredAt,
       };
@@ -333,6 +359,64 @@ export function applyEvent(
       };
     }
 
+    case "ย้ายเทอม": {
+      if (!state) throw new Error("ย้ายเทอมให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      // ย้ายเทอมไม่เปลี่ยนสถานะทั้งสามมิติ เป็นแค่การเลื่อนรอบที่จะเริ่มเรียน
+      return { ...state, lastEventAt: later(state.lastEventAt, event.occurredAt) };
+    }
+
+    case "ดรอป": {
+      if (!state) throw new Error("ดรอปให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        enrollmentStatus: "ดรอป",
+        enrollmentStatusConfirmedAt: event.occurredAt,
+        // ค่าเทอมที่จ่ายไปแล้วไม่คืน แต่เก็บเป็นเครดิตไว้ให้ตอนกลับมาเรียน
+        creditBalance: event.payload.creditAmount ?? state.creditBalance,
+        // สถานะการเงินไม่ขยับ — คนที่ชำระครบแล้วก็ดรอปได้ (ADR-0002)
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "กลับมาเรียน": {
+      if (!state) throw new Error("กลับมาเรียนให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        enrollmentStatus: "เรียนอยู่",
+        enrollmentStatusConfirmedAt: event.occurredAt,
+        // เครดิตถูกใช้ไปกับเทอมที่กลับมาเรียน
+        creditBalance: 0,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ลาออก": {
+      if (!state) throw new Error("ลาออกให้คนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      return {
+        ...state,
+        enrollmentStatus: "ลาออก",
+        enrollmentStatusConfirmedAt: event.occurredAt,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ยืนยันสถานะ": {
+      if (!state) throw new Error("ยืนยันสถานะของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      // ค่าสถานะไม่เปลี่ยน เปลี่ยนแค่ "รู้ล่าสุดเมื่อไหร่" (ADR-0003)
+      return {
+        ...state,
+        enrollmentStatusConfirmedAt:
+          event.payload.dimension === "การเรียน"
+            ? event.occurredAt
+            : state.enrollmentStatusConfirmedAt,
+        paymentStatusConfirmedAt:
+          event.payload.dimension === "การเงิน"
+            ? event.occurredAt
+            : state.paymentStatusConfirmedAt,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
     case "รวมข้อมูล": {
       if (!state) {
         throw new Error("รวมข้อมูลเข้ารายการที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
@@ -367,6 +451,10 @@ export function sortEvents(events: readonly DomainEvent[]): DomainEvent[] {
 /**
  * สร้างสถานะปัจจุบันใหม่จากเหตุการณ์ทั้งหมด
  * เป็นทั้งเครื่องมือกู้ข้อมูลและเครื่องพิสูจน์ว่า projection ถูกต้อง
+ *
+ * เหตุการณ์ `ติดต่อเข้ามา` ที่เก่าที่สุดถูกยกมาใส่ก่อนเสมอ เพราะเป็นตัวสร้างสถานะ
+ * ถ้าเรียงตามเวลาล้วน ๆ การบันทึก `โทรตาม` ย้อนหลังไปก่อนวันที่ติดต่อ (ซึ่งเกิดขึ้นจริง)
+ * จะทำให้เล่นเหตุการณ์ซ้ำแล้วพัง
  */
 export function rebuildState(events: readonly DomainEvent[]): PersonState {
   const ordered = sortEvents(events);
@@ -374,9 +462,17 @@ export function rebuildState(events: readonly DomainEvent[]): PersonState {
     throw new Error("สร้างสถานะจากรายการเหตุการณ์ว่างไม่ได้");
   }
 
-  let state: PersonState | null = null;
-  for (const event of ordered) {
+  const creationIndex = ordered.findIndex(
+    (event) => event.type === "ติดต่อเข้ามา",
+  );
+  if (creationIndex === -1) {
+    throw new Error("ไม่พบเหตุการณ์ `ติดต่อเข้ามา` จึงสร้างสถานะไม่ได้");
+  }
+
+  let state = applyEvent(null, ordered[creationIndex]);
+  for (const [index, event] of ordered.entries()) {
+    if (index === creationIndex) continue;
     state = applyEvent(state, event);
   }
-  return state as PersonState;
+  return state;
 }

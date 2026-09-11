@@ -1,16 +1,16 @@
 /**
  * สร้างสถานะปัจจุบัน (ตาราง people) ใหม่จากเหตุการณ์ทั้งหมด
  *
- *   node scripts/rebuild-people.ts --check    เทียบอย่างเดียว ไม่เขียน
- *   node scripts/rebuild-people.ts            เขียนทับด้วยค่าที่เล่นใหม่
+ *   npm run db:verify    เทียบอย่างเดียว ไม่เขียน
+ *   npm run db:rebuild   เขียนทับด้วยค่าที่เล่นใหม่
  *
  * เป็นทั้งเครื่องมือกู้ข้อมูล และเครื่องพิสูจน์ว่า projection ถูกต้อง (ADR-0001)
  */
 import { createClient } from "@supabase/supabase-js";
 import { config as loadEnv } from "dotenv";
 
-import { rebuildState, type DomainEvent, type PersonState } from "../src/lib/domain/events.ts";
-import { toDomainEvent } from "../src/lib/domain/from-db.ts";
+import { rebuildState, type DomainEvent, type PersonState } from "../src/lib/domain/events";
+import { toDomainEvent } from "../src/lib/domain/from-db";
 
 loadEnv({ path: ".env.local", quiet: true });
 
@@ -56,7 +56,7 @@ const FIELDS = [
   "studyMode", "facultyId", "programId", "priorEducation", "ownerId", "note",
   "followUpStatus", "enrollmentStatus", "paymentStatus",
   "enrollmentStatusConfirmedAt", "paymentStatusConfirmedAt",
-  "nextCallAt", "firstContactedAt", "lastEventAt",
+  "nextCallAt", "creditBalance", "firstContactedAt", "lastEventAt",
 ] as const;
 
 function fromRow(row: Record<string, unknown>): PersonState {
@@ -78,6 +78,7 @@ function fromRow(row: Record<string, unknown>): PersonState {
     enrollmentStatusConfirmedAt: (row.enrollment_status_confirmed_at ?? null) as string | null,
     paymentStatusConfirmedAt: (row.payment_status_confirmed_at ?? null) as string | null,
     nextCallAt: (row.next_call_at ?? null) as string | null,
+    creditBalance: Number(row.credit_balance ?? 0),
     firstContactedAt: row.first_contacted_at as string,
     lastEventAt: row.last_event_at as string,
   };
@@ -123,20 +124,30 @@ async function main() {
     const rebuilt = rebuildState(personEvents);
     const current = stored.get(personId);
 
-    const matches =
-      current &&
-      FIELDS.every(
-        (field) =>
-          JSON.stringify(normalise({ [field]: rebuilt[field] })) ===
-          JSON.stringify(normalise({ [field]: current[field] })),
-      );
+    const differingFields = current
+      ? FIELDS.filter(
+          (field) =>
+            JSON.stringify(normalise({ [field]: rebuilt[field] })) !==
+            JSON.stringify(normalise({ [field]: current[field] })),
+        )
+      : ["(ไม่มีแถวในตาราง people)"];
 
-    if (matches) {
+    if (differingFields.length === 0) {
       same += 1;
       continue;
     }
 
     different.push(personId);
+    // บอกให้ชัดว่าต่างตรงไหน ไม่งั้นรู้แค่ว่าต่างแล้วไล่ต่อไม่ถูก
+    console.log(
+      `  ต่าง ${personId} (${current?.fullName ?? "?"}): ${differingFields
+        .map((field) =>
+          current
+            ? `${field} ${JSON.stringify(current[field as keyof PersonState])} → ${JSON.stringify(rebuilt[field as keyof PersonState])}`
+            : field,
+        )
+        .join(", ")}`,
+    );
     if (!checkOnly) {
       const { error } = await supabase.rpc("rebuild_person_state", {
         p_person_id: personId,
