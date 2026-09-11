@@ -221,3 +221,114 @@ describe("สร้างสถานะใหม่จากเหตุกา�
     expect(input).toEqual(copy);
   });
 });
+
+describe("โทรตาม", () => {
+  const base = applyEvent(null, contacted);
+
+  it.each([
+    ["ไม่รับสาย", "กำลังติดตาม"],
+    ["คุยแล้วสนใจ", "สนใจสมัคร"],
+    ["คุยแล้วไม่สนใจ", "ไม่สนใจ"],
+    ["ขอคิดดูก่อน", "กำลังติดตาม"],
+    ["นัดโทรใหม่", "นัดโทรแล้ว"],
+    ["สมัครแล้ว", "สมัครแล้ว"],
+  ] as const)("ผล %s ทำให้สถานะติดตามเป็น %s", (outcome, expected) => {
+    const next = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome },
+    });
+
+    expect(next.followUpStatus).toBe(expected);
+  });
+
+  it("เก็บวันนัดโทรครั้งถัดไปไว้", () => {
+    const next = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome: "นัดโทรใหม่", nextCallAt: "2026-09-12T03:00:00.000Z" },
+    });
+
+    expect(next.nextCallAt).toBe("2026-09-12T03:00:00.000Z");
+  });
+
+  it("ผลที่จบแล้วต้องล้างวันนัด ไม่งั้นจะโผล่ในคิวโทรทั้งที่จบไปแล้ว", () => {
+    const scheduled = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome: "นัดโทรใหม่", nextCallAt: "2026-09-12T03:00:00.000Z" },
+    });
+
+    const done = applyEvent(scheduled, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-06T03:00:00.000Z",
+      payload: { outcome: "สมัครแล้ว" },
+    });
+
+    expect(done.nextCallAt).toBeNull();
+  });
+
+  it("ไม่แตะสถานะการเรียนและสถานะการเงิน (ADR-0002)", () => {
+    const next = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome: "สมัครแล้ว" },
+    });
+
+    expect(next.enrollmentStatus).toBe("ยังไม่เริ่ม");
+    expect(next.paymentStatus).toBe("ยังไม่ชำระ");
+  });
+
+  it("ไม่แตะข้อมูลติดต่อ", () => {
+    const next = applyEvent(base, {
+      type: "โทรตาม",
+      occurredAt: "2026-09-05T03:00:00.000Z",
+      payload: { outcome: "คุยแล้วสนใจ", note: "สนใจภาคทางไกล" },
+    });
+
+    expect(next.phone).toBe(base.phone);
+    expect(next.fullName).toBe(base.fullName);
+  });
+});
+
+describe("ปิดเคส", () => {
+  const base = applyEvent(null, contacted);
+
+  it.each(["ไม่สนใจ", "ติดต่อไม่ได้"] as const)(
+    "ปิดด้วยเหตุผล %s แล้วสถานะเป็นแบบนั้น และล้างวันนัด",
+    (reason) => {
+      const scheduled = applyEvent(base, {
+        type: "โทรตาม",
+        occurredAt: "2026-09-05T03:00:00.000Z",
+        payload: { outcome: "นัดโทรใหม่", nextCallAt: "2026-09-12T03:00:00.000Z" },
+      });
+
+      const closed = applyEvent(scheduled, {
+        type: "ปิดเคส",
+        occurredAt: "2026-09-07T03:00:00.000Z",
+        payload: { reason },
+      });
+
+      expect(closed.followUpStatus).toBe(reason);
+      expect(closed.nextCallAt).toBeNull();
+    },
+  );
+});
+
+describe("ตามได้ไม่จำกัดจำนวนครั้ง", () => {
+  it("โทรตาม 20 ครั้งแล้วยังคำนวณสถานะถูก — ชีทเดิมตันที่ 6", () => {
+    const events: DomainEvent[] = [contacted];
+    for (let i = 1; i <= 20; i += 1) {
+      events.push({
+        type: "โทรตาม",
+        occurredAt: new Date(Date.UTC(2026, 8, i, 3)).toISOString(),
+        sequence: i + 1,
+        payload: { outcome: i === 20 ? "คุยแล้วสนใจ" : "ไม่รับสาย" },
+      });
+    }
+
+    const state = rebuildState(events);
+    expect(state.followUpStatus).toBe("สนใจสมัคร");
+    expect(state.lastEventAt).toBe(new Date(Date.UTC(2026, 8, 20, 3)).toISOString());
+  });
+});

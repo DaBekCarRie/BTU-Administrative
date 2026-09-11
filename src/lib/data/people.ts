@@ -248,3 +248,53 @@ export async function getPersonForEdit(id: string) {
     note: data.note,
   };
 }
+
+export type TimelineEntry = {
+  id: number;
+  type: string;
+  occurredAt: string;
+  recordedAt: string;
+  recordedBy: string | null;
+  payload: Record<string, unknown>;
+};
+
+/** ประวัติทั้งหมดของคนหนึ่ง เรียงใหม่ไปเก่าตามเวลาที่เกิดจริง ไม่จำกัดจำนวน */
+export async function listTimeline(personId: string): Promise<TimelineEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, type, occurred_at, recorded_at, payload, staff ( display_name )")
+    .eq("person_id", personId)
+    .order("occurred_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (error) throw new Error(`อ่านประวัติไม่สำเร็จ: ${error.message}`);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    type: row.type,
+    occurredAt: row.occurred_at,
+    recordedAt: row.recorded_at,
+    recordedBy: row.staff?.display_name ?? null,
+    payload: (row.payload ?? {}) as Record<string, unknown>,
+  }));
+}
+
+/** ข้อมูลหัวเรื่องของหน้ารายละเอียด */
+export async function getPersonDetail(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("people")
+    .select(
+      `id, full_name, nickname, phone, line_id, facebook_name, study_mode,
+       prior_education, follow_up_status, enrollment_status, payment_status,
+       enrollment_status_confirmed_at, payment_status_confirmed_at,
+       next_call_at, note, first_contacted_at,
+       faculties ( name ), programs ( name ), staff ( display_name )`,
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(`อ่านข้อมูลคนไม่สำเร็จ: ${error.message}`);
+  return data;
+}

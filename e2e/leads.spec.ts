@@ -53,6 +53,8 @@ test.describe("เพิ่มผู้สนใจ", () => {
     await expect(page).toHaveURL(/\/leads$/);
 
     await page.getByRole("link", { name }).click();
+    await expect(page).toHaveURL(/\/leads\/[0-9a-f-]+$/);
+    await page.getByRole("link", { name: "แก้ไขข้อมูล" }).click();
     await expect(page).toHaveURL(/\/leads\/[0-9a-f-]+\/edit/);
 
     // ฟอร์มเติมค่าเดิมมาให้

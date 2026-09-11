@@ -5,15 +5,21 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { recordEvent } from "@/lib/data/people";
-import type {
-  PersonDetails,
-  PriorEducation,
-  StudyMode,
+import {
+  CALL_OUTCOMES,
+  CLOSE_REASONS,
+  type PersonDetails,
+  type PriorEducation,
+  type StudyMode,
 } from "@/lib/domain/events";
 import { normalizePhone } from "@/lib/phone";
 import { Constants } from "@/types/database";
 
-export type LeadFormState = { error?: string };
+export type LeadFormState = {
+  error?: string;
+  /** ต้องแยกจาก {} ให้ได้ ไม่งั้นหน้าจอแยกไม่ออกว่ายังไม่ส่ง หรือส่งสำเร็จแล้ว */
+  ok?: boolean;
+};
 
 function text(formData: FormData, key: string): string | null {
   const value = String(formData.get(key) ?? "").trim();
@@ -101,4 +107,61 @@ export async function editLead(
 
   revalidatePath("/leads");
   redirect("/leads");
+}
+
+/** บันทึกผลการโทร = เหตุการณ์ `โทรตาม` */
+export async function logCall(
+  _prev: LeadFormState,
+  formData: FormData,
+): Promise<LeadFormState> {
+  const personId = text(formData, "personId");
+  if (!personId) return { error: "ไม่พบรหัสของคนที่จะบันทึก" };
+
+  const outcome = optionOf(CALL_OUTCOMES, text(formData, "outcome"));
+  if (!outcome) return { error: "กรุณาเลือกผลการโทร" };
+
+  const occurredAtDate = text(formData, "occurredAt");
+  const nextCallDate = text(formData, "nextCallAt");
+
+  await recordEvent(personId, {
+    type: "โทรตาม",
+    occurredAt: occurredAtDate
+      ? new Date(`${occurredAtDate}T12:00:00`).toISOString()
+      : new Date().toISOString(),
+    payload: {
+      outcome,
+      note: text(formData, "note"),
+      nextCallAt: nextCallDate
+        ? new Date(`${nextCallDate}T09:00:00`).toISOString()
+        : null,
+    },
+  });
+
+  revalidatePath(`/leads/${personId}`);
+  revalidatePath("/leads");
+  revalidatePath("/queue");
+  return { ok: true };
+}
+
+/** ปิดเคส = เหตุการณ์ `ปิดเคส` คนนั้นจะไม่โผล่ในคิวโทรอีก */
+export async function closeLead(
+  _prev: LeadFormState,
+  formData: FormData,
+): Promise<LeadFormState> {
+  const personId = text(formData, "personId");
+  if (!personId) return { error: "ไม่พบรหัสของคนที่จะปิดเคส" };
+
+  const reason = optionOf(CLOSE_REASONS, text(formData, "reason"));
+  if (!reason) return { error: "กรุณาเลือกเหตุผลที่ปิดเคส" };
+
+  await recordEvent(personId, {
+    type: "ปิดเคส",
+    occurredAt: new Date().toISOString(),
+    payload: { reason, note: text(formData, "note") },
+  });
+
+  revalidatePath(`/leads/${personId}`);
+  revalidatePath("/leads");
+  revalidatePath("/queue");
+  return { ok: true };
 }

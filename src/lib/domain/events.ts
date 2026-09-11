@@ -79,6 +79,19 @@ type EventBase = {
  * ฐานข้อมูลประกาศครบ 15 ชนิดตั้งแต่ต้น แต่ TS จะทยอยรับทีละใบงาน
  * เพื่อให้ switch ด้านล่างครบถ้วนเสมอ (exhaustive) ไม่ใช่มี default เงียบ ๆ
  */
+export const CALL_OUTCOMES = [
+  "ไม่รับสาย",
+  "คุยแล้วสนใจ",
+  "คุยแล้วไม่สนใจ",
+  "ขอคิดดูก่อน",
+  "นัดโทรใหม่",
+  "สมัครแล้ว",
+] as const;
+export type CallOutcome = (typeof CALL_OUTCOMES)[number];
+
+export const CLOSE_REASONS = ["ไม่สนใจ", "ติดต่อไม่ได้"] as const;
+export type CloseReason = (typeof CLOSE_REASONS)[number];
+
 export type DomainEvent =
   | (EventBase & {
       type: "ติดต่อเข้ามา";
@@ -87,7 +100,43 @@ export type DomainEvent =
   | (EventBase & {
       type: "แก้ไขข้อมูล";
       payload: Partial<PersonDetails>;
+    })
+  | (EventBase & {
+      type: "โทรตาม";
+      payload: {
+        outcome: CallOutcome;
+        note?: string | null;
+        nextCallAt?: string | null;
+      };
+    })
+  | (EventBase & {
+      type: "ปิดเคส";
+      payload: { reason: CloseReason; note?: string | null };
     });
+
+/**
+ * ผลการโทรกำหนดสถานะการติดตามถัดไป
+ * ไม่แตะสถานะการเรียนและสถานะการเงิน — สามมิติเปลี่ยนอิสระต่อกัน (ADR-0002)
+ */
+const OUTCOME_TO_STATUS: Record<CallOutcome, FollowUpStatus> = {
+  ไม่รับสาย: "กำลังติดตาม",
+  คุยแล้วสนใจ: "สนใจสมัคร",
+  คุยแล้วไม่สนใจ: "ไม่สนใจ",
+  ขอคิดดูก่อน: "กำลังติดตาม",
+  นัดโทรใหม่: "นัดโทรแล้ว",
+  สมัครแล้ว: "สมัครแล้ว",
+};
+
+/** สถานะที่ถือว่าจบแล้ว ไม่ต้องโผล่ในคิวโทรอีก */
+const CLOSED_STATUSES: ReadonlySet<FollowUpStatus> = new Set([
+  "ไม่สนใจ",
+  "ติดต่อไม่ได้",
+  "สมัครแล้ว",
+]);
+
+export function isClosed(status: FollowUpStatus): boolean {
+  return CLOSED_STATUSES.has(status);
+}
 
 export type DomainEventType = DomainEvent["type"];
 
@@ -174,6 +223,37 @@ export function applyEvent(
       return {
         ...state,
         ...applyDetails(state, event.payload),
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "โทรตาม": {
+      if (!state) {
+        throw new Error("บันทึกผลโทรของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      }
+
+      const followUpStatus = OUTCOME_TO_STATUS[event.payload.outcome];
+
+      return {
+        ...state,
+        followUpStatus,
+        // นัดครั้งถัดไปมีความหมายเฉพาะกับคนที่ยังตามอยู่
+        nextCallAt: isClosed(followUpStatus)
+          ? null
+          : (event.payload.nextCallAt ?? null),
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "ปิดเคส": {
+      if (!state) {
+        throw new Error("ปิดเคสของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      }
+
+      return {
+        ...state,
+        followUpStatus: event.payload.reason,
+        nextCallAt: null,
         lastEventAt: later(state.lastEventAt, event.occurredAt),
       };
     }

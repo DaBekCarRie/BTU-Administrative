@@ -1,4 +1,4 @@
-import type { DomainEvent, PersonDetails } from "./events";
+import { CALL_OUTCOMES, type CallOutcome, type DomainEvent, type PersonDetails } from "./events";
 
 type RawEvent = {
   id: number;
@@ -58,6 +58,34 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
         occurredAt: row.occurred_at,
         sequence: row.id,
         payload: patch,
+      };
+    }
+
+    case "โทรตาม": {
+      const outcome = str(payload.outcome);
+      if (!outcome || !(CALL_OUTCOMES as readonly string[]).includes(outcome)) {
+        return null;
+      }
+      return {
+        type: "โทรตาม",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          outcome: outcome as CallOutcome,
+          note: str(payload.note),
+          nextCallAt: str(payload.nextCallAt),
+        },
+      };
+    }
+
+    case "ปิดเคส": {
+      const reason = str(payload.reason);
+      if (reason !== "ไม่สนใจ" && reason !== "ติดต่อไม่ได้") return null;
+      return {
+        type: "ปิดเคส",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { reason, note: str(payload.note) },
       };
     }
 

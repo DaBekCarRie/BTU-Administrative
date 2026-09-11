@@ -91,7 +91,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
                 <tr key={person.id} className="border-b last:border-b-0">
                   <td className="px-3 py-1.5 font-medium whitespace-nowrap">
                     <Link
-                      href={`/leads/${person.id}/edit`}
+                      href={`/leads/${person.id}`}
                       className="underline-offset-4 hover:underline"
                     >
                       {person.fullName}

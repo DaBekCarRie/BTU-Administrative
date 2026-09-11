@@ -1,0 +1,83 @@
+import { expect, test } from "@playwright/test";
+
+const EMAIL = process.env.E2E_EMAIL;
+const PASSWORD = process.env.E2E_PASSWORD;
+
+async function login(page: import("@playwright/test").Page) {
+  await page.goto("/login");
+  await page.getByLabel("อีเมล").fill(EMAIL!);
+  await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
+  await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
+  await expect(page).toHaveURL(/\/queue/);
+}
+
+async function createLead(page: import("@playwright/test").Page, name: string) {
+  await page.goto("/leads/new");
+  await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
+  await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
+  await expect(page).toHaveURL(/\/leads$/);
+  await page.getByRole("link", { name }).click();
+  await expect(page).toHaveURL(/\/leads\/[0-9a-f-]+$/);
+}
+
+test.describe("บันทึกผลการโทรและไทม์ไลน์", () => {
+  test.skip(!EMAIL || !PASSWORD, "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD");
+
+  test.beforeEach(async ({ page }) => login(page));
+
+  test("บันทึกผลโทรจบได้ใน 3 แตะ และสถานะเปลี่ยนตามผล", async ({ page }) => {
+    await createLead(page, `โทร ${Date.now()}`);
+
+    // แตะ 1: เปิด · แตะ 2: เลือกผล · แตะ 3: บันทึก
+    await page.getByTestId("open-log-call").click();
+    await page.getByTestId("outcome-คุยแล้วสนใจ").click();
+    await page.getByTestId("submit-log-call").click();
+
+    await expect(page.getByTestId("follow-up-status")).toHaveText("สนใจสมัคร");
+    await expect(page.getByTestId("timeline")).toContainText("โทรตาม");
+  });
+
+  test("นัดโทรครั้งถัดไปแบบลัดได้", async ({ page }) => {
+    await createLead(page, `นัด ${Date.now()}`);
+
+    await page.getByTestId("open-log-call").click();
+    await page.getByTestId("outcome-นัดโทรใหม่").click();
+    await page.getByRole("button", { name: "1 สัปดาห์" }).click();
+    await page.getByTestId("submit-log-call").click();
+
+    await expect(page.getByTestId("follow-up-status")).toHaveText("นัดโทรแล้ว");
+    await expect(page.getByText(/นัดโทร \d/)).toBeVisible();
+  });
+
+  test("บันทึกย้อนหลังได้ และไทม์ไลน์เรียงตามเวลาที่เกิดจริง", async ({ page }) => {
+    await createLead(page, `ย้อนหลัง ${Date.now()}`);
+
+    // ครั้งแรกบันทึกเป็นวันนี้
+    await page.getByTestId("open-log-call").click();
+    await page.getByTestId("outcome-ไม่รับสาย").click();
+    await page.getByTestId("submit-log-call").click();
+    await expect(page.getByTestId("timeline")).toContainText("โทรตาม");
+
+    // ครั้งที่สองบันทึกย้อนหลังไปปีก่อน ต้องไปอยู่ล่างสุดของไทม์ไลน์
+    await page.getByTestId("open-log-call").click();
+    await page.getByTestId("outcome-ขอคิดดูก่อน").click();
+    await page.getByLabel("วันที่โทรจริง").fill("2025-01-15");
+    await page.getByTestId("submit-log-call").click();
+
+    const entries = page.getByTestId("timeline").locator("li");
+    await expect(entries).toHaveCount(3);
+    await expect(entries.last()).toContainText("2568"); // ปี พ.ศ. ของ 2025
+
+    // ย้อนหลังแล้ว "ติดต่อเข้ามา" ต้องไม่ใช่รายการล่างสุดอีก
+    await expect(entries.last()).toContainText("โทรตาม");
+  });
+
+  test("ปิดเคสแล้วสถานะเปลี่ยนและปุ่มปิดเคสหายไป", async ({ page }) => {
+    await createLead(page, `ปิด ${Date.now()}`);
+
+    await page.getByTestId("close-ติดต่อไม่ได้").click();
+
+    await expect(page.getByTestId("follow-up-status")).toHaveText("ติดต่อไม่ได้");
+    await expect(page.getByTestId("close-ติดต่อไม่ได้")).toHaveCount(0);
+  });
+});
