@@ -54,6 +54,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </nav>
 
         <div className="mt-auto border-t p-3">
+          <Link
+            href="/master-data"
+            className="text-muted-foreground hover:text-foreground mb-3 block text-xs underline-offset-4 hover:underline"
+          >
+            ข้อมูลหลัก (คณะ/สาขา)
+          </Link>
           <p className="truncate text-sm font-medium" data-testid="current-user">
             {staff.display_name}
           </p>
