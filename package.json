@@ -11,7 +11,11 @@
     "db:types": "supabase gen types typescript --linked > src/types/database.ts",
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:rebuild": "node scripts/rebuild-people.mts",
+    "db:verify": "node scripts/rebuild-people.mts --check"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -42,7 +46,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.13.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
@@ -51,6 +55,7 @@
     "server-only": "^0.0.1",
     "supabase": "^2.117.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.0"
   }
 }

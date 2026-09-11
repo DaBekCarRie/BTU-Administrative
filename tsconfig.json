@@ -5,6 +5,8 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    // สคริปต์ใน scripts/ รันด้วย node ตรง ๆ จึง import ด้วยนามสกุล .ts
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",

@@ -20,9 +20,12 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npx next dev --port ${PORT}`,
+    // รันกับ production build ไม่ใช่ dev server
+    // dev server คอมไพล์ route ตอนถูกเรียกครั้งแรก พอหลาย worker ยิงพร้อมกันจะ timeout
+    // และ build ยังใกล้เคียงของจริงมากกว่า
+    command: `npm run build && npx next start --port ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });
