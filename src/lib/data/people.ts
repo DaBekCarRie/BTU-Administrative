@@ -93,10 +93,15 @@ export type PersonListItem = {
   studyMode: string | null;
   followUpStatus: string;
   ownerName: string | null;
-  lastEventAt: string;
+  /**
+   * เวลาที่บันทึกล่าสุด ไม่ใช่เวลาที่เหตุการณ์เกิด
+   * ใช้อันนี้เรียงลำดับ เพราะเหตุการณ์ตั้งวันล่วงหน้าได้ ถ้าเรียงตามเวลาเกิด
+   * รายการที่นัดไว้เดือนหน้าจะลอยขึ้นเหนือสิ่งที่เพิ่งทำวันนี้
+   */
+  updatedAt: string;
 };
 
-const LIST_COLUMNS = `id, full_name, phone, facebook_name, study_mode, follow_up_status, last_event_at,
+const LIST_COLUMNS = `id, full_name, phone, facebook_name, study_mode, follow_up_status, updated_at,
    faculties ( name ), programs ( name ), staff ( display_name )`;
 
 /**
@@ -153,7 +158,7 @@ export async function listPeople(
     supabase.from("people").select(LIST_COLUMNS, { count: "exact" }),
     filters,
   )
-    .order("last_event_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
 
   const { data, error, count } = await query;
@@ -175,7 +180,7 @@ export async function listPeople(
       studyMode: row.study_mode,
       followUpStatus: row.follow_up_status,
       ownerName: row.staff?.display_name ?? null,
-      lastEventAt: row.last_event_at,
+      updatedAt: row.updated_at,
     })),
   };
 }
@@ -191,7 +196,7 @@ export async function listPeopleForExport(
     supabase.from("people").select(LIST_COLUMNS),
     filters,
   )
-    .order("last_event_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(`ส่งออกไม่สำเร็จ: ${error.message}`);
@@ -206,7 +211,7 @@ export async function listPeopleForExport(
     studyMode: row.study_mode,
     followUpStatus: row.follow_up_status,
     ownerName: row.staff?.display_name ?? null,
-    lastEventAt: row.last_event_at,
+    updatedAt: row.updated_at,
   }));
 }
 

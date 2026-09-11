@@ -60,7 +60,17 @@ function toItem(row: QueueRow): QueueItem {
 export type CallQueue = {
   overdue: QueueItem[];
   today: QueueItem[];
+  /** จำนวนทั้งหมดที่ถึงกำหนด — อาจมากกว่าที่แสดง */
+  total: number;
+  truncated: boolean;
 };
+
+/**
+ * แสดงได้มากสุดเท่านี้ต่อครั้ง
+ * PostgREST คืนสูงสุด 1,000 แถวอยู่แล้ว ถ้าไม่กำหนดเองจะถูกตัดเงียบ ๆ
+ * โดยที่หน้าจอไม่บอกว่ายังมีอีก
+ */
+const QUEUE_LIMIT = 200;
 
 /** สิ้นสุดวันนี้ตามเวลาไทย ในรูป ISO */
 function endOfTodayBangkok(): string {
@@ -84,22 +94,26 @@ function startOfTodayBangkok(): string {
 export async function getCallQueue(): Promise<CallQueue> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("people_with_call_summary")
-    .select(COLUMNS)
+    .select(COLUMNS, { count: "exact" })
     .not("next_call_at", "is", null)
     .lte("next_call_at", endOfTodayBangkok())
     .not("follow_up_status", "in", `(${CLOSED.join(",")})`)
-    .order("next_call_at", { ascending: true });
+    .order("next_call_at", { ascending: true })
+    .limit(QUEUE_LIMIT);
 
   if (error) throw new Error(`อ่านคิวโทรไม่สำเร็จ: ${error.message}`);
 
   const startToday = startOfTodayBangkok();
   const items = (data ?? []).map(toItem);
+  const total = count ?? items.length;
 
   return {
     overdue: items.filter((item) => item.nextCallAt < startToday),
     today: items.filter((item) => item.nextCallAt >= startToday),
+    total,
+    truncated: total > items.length,
   };
 }
 

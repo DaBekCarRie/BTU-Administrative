@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
 
@@ -28,9 +29,7 @@ export async function createAnswer(
     : "ตอบผู้สนใจได้";
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const staffId = await currentStaffId();
 
   const { error } = await supabase.from("answers").insert({
     question,
@@ -39,7 +38,7 @@ export async function createAnswer(
     source: text(formData, "source"),
     // คำตอบที่เพิ่งเขียนถือว่ายืนยันแล้ว ณ วันนี้
     confirmed_at: new Date().toISOString(),
-    confirmed_by: user?.id ?? null,
+    confirmed_by: staffId,
   });
 
   if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
@@ -57,15 +56,13 @@ export async function confirmAnswer(
   if (!id) return { error: "ไม่พบคำตอบที่จะยืนยัน" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const staffId = await currentStaffId();
 
   const { error } = await supabase
     .from("answers")
     .update({
       confirmed_at: new Date().toISOString(),
-      confirmed_by: user?.id ?? null,
+      confirmed_by: staffId,
     })
     .eq("id", id);
 

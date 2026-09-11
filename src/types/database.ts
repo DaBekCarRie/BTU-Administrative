@@ -648,6 +648,7 @@ export type Database = {
       };
       staff: {
         Row: {
+          auth_user_id: string | null;
           created_at: string;
           display_name: string;
           id: string;
@@ -656,14 +657,16 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          auth_user_id?: string | null;
           created_at?: string;
           display_name: string;
-          id: string;
+          id?: string;
           is_active?: boolean;
           role?: string;
           updated_at?: string;
         };
         Update: {
+          auth_user_id?: string | null;
           created_at?: string;
           display_name?: string;
           id?: string;

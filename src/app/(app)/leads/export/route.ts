@@ -14,7 +14,7 @@ const HEADERS = [
   "ภาค",
   "สถานะติดตาม",
   "ผู้ดูแล",
-  "ล่าสุด",
+  "บันทึกล่าสุด",
 ];
 
 function cell(value: string | null): string {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       person.studyMode,
       person.followUpStatus,
       person.ownerName,
-      formatThaiDate(person.lastEventAt),
+      formatThaiDate(person.updatedAt),
     ]
       .map(cell)
       .join(","),

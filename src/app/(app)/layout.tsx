@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { data: staff } = await supabase
     .from("staff")
     .select("display_name, role")
-    .eq("id", user.id)
+    .eq("auth_user_id", user.id)
     .eq("is_active", true)
     .maybeSingle();
 

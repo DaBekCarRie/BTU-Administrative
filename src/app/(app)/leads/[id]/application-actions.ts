@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { recordEvent } from "@/lib/data/people";
 import type { PaymentStatus, StudyMode } from "@/lib/domain/events";
+import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
 
@@ -86,9 +87,7 @@ export async function recordPayment(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const staffId = await currentStaffId();
 
   const { error } = await supabase.from("payments").insert({
     application_id: applicationId,
@@ -96,7 +95,7 @@ export async function recordPayment(
     paid_at: paidAt,
     receipt_no: text(formData, "receiptNo"),
     note: text(formData, "note"),
-    recorded_by: user?.id ?? null,
+    recorded_by: staffId,
   });
   if (error) return { error: `บันทึกการชำระไม่สำเร็จ: ${error.message}` };
 

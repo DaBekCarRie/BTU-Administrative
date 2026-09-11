@@ -84,25 +84,56 @@ function fromRow(row: Record<string, unknown>): PersonState {
   };
 }
 
+/**
+ * PostgREST คืนสูงสุด 1,000 แถวต่อครั้ง
+ * ถ้าไม่แบ่งหน้าอ่าน สคริปต์จะเทียบแค่ส่วนหัวแล้วรายงานว่าต่างทั้งที่ไม่ได้ต่าง
+ * ซึ่งอันตรายกว่าไม่มีเครื่องมือเลย
+ */
+const PAGE = 1000;
+
+async function readAll<T>(
+  table: string,
+  columns: string,
+  order: string[],
+): Promise<T[]> {
+  const supabase = await client;
+  const all: T[] = [];
+
+  for (let from = 0; ; from += PAGE) {
+    let query = supabase.from(table).select(columns).range(from, from + PAGE - 1);
+    for (const column of order) query = query.order(column);
+
+    const { data, error } = await query;
+    if (error) throw new Error(`อ่าน ${table} ไม่สำเร็จ: ${error.message}`);
+
+    all.push(...((data ?? []) as T[]));
+    if ((data?.length ?? 0) < PAGE) return all;
+  }
+}
+
+let client: Promise<Awaited<ReturnType<typeof makeClient>>>;
+
 async function main() {
-  const supabase = await makeClient();
+  client = makeClient();
+  const supabase = await client;
 
-  const { data: events, error: eventsError } = await supabase
-    .from("events")
-    .select("id, person_id, type, occurred_at, payload")
-    .order("person_id")
-    .order("occurred_at")
-    .order("id");
-  if (eventsError) throw new Error(eventsError.message);
+  const events = await readAll<{
+    id: number;
+    person_id: string;
+    type: string;
+    occurred_at: string;
+    payload: unknown;
+  }>("events", "id, person_id, type, occurred_at, payload", [
+    "person_id",
+    "occurred_at",
+    "id",
+  ]);
 
-  const { data: rows, error: peopleError } = await supabase
-    .from("people")
-    .select("*");
-  if (peopleError) throw new Error(peopleError.message);
+  const rows = await readAll<Record<string, unknown>>("people", "*", ["id"]);
 
   const byPerson = new Map<string, DomainEvent[]>();
   let skipped = 0;
-  for (const raw of events ?? []) {
+  for (const raw of events) {
     const event = toDomainEvent(raw);
     if (!event) {
       skipped += 1;
@@ -114,7 +145,7 @@ async function main() {
   }
 
   const stored = new Map(
-    (rows ?? []).map((row) => [row.id as string, fromRow(row)]),
+    rows.map((row) => [row.id as string, fromRow(row)]),
   );
 
   let same = 0;

@@ -107,14 +107,16 @@ function QueueTable({
 
 export default async function QueuePage() {
   const [queue, stale] = await Promise.all([getCallQueue(), countStale(7)]);
-  const total = queue.overdue.length + queue.today.length;
+  const shown = queue.overdue.length + queue.today.length;
+  const total = queue.total;
 
   return (
     <div className="p-6">
       <header className="mb-5">
         <h1 className="text-xl font-semibold">คิวโทรวันนี้</h1>
         <p className="text-muted-foreground mt-1 text-sm" data-testid="queue-summary">
-          ต้องโทร {total} คน
+          ต้องโทร {total.toLocaleString("th-TH")} คน
+          {queue.truncated ? ` (แสดง ${shown} รายแรก)` : ""}
           {queue.overdue.length > 0 ? ` · เลยกำหนด ${queue.overdue.length}` : ""}
           {" · "}
           <Link href="/leads" className="underline underline-offset-4">
@@ -123,7 +125,7 @@ export default async function QueuePage() {
         </p>
       </header>
 
-      {total === 0 ? (
+      {shown === 0 ? (
         <div className="rounded-md border border-dashed p-10 text-center">
           <p className="font-medium">วันนี้ไม่มีคิวโทร</p>
           <p className="text-muted-foreground mt-1 text-sm">

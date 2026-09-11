@@ -16,7 +16,7 @@ const HEADERS = [
   "ภาค",
   "สถานะติดตาม",
   "ผู้ดูแล",
-  "ล่าสุด",
+  "บันทึกล่าสุด",
 ] as const;
 
 export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
@@ -131,7 +131,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
                     )}
                   </td>
                   <td className="text-muted-foreground px-3 py-1.5 whitespace-nowrap">
-                    {formatThaiDate(person.lastEventAt)}
+                    {formatThaiDate(person.updatedAt)}
                   </td>
                 </tr>
               ))}

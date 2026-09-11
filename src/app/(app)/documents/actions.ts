@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createSignedUrl } from "@/lib/data/documents";
+import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
 
@@ -24,9 +25,7 @@ export async function recordUpload(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const staffId = await currentStaffId();
 
   const { error } = await supabase.from("documents").upsert(
     {
@@ -37,7 +36,7 @@ export async function recordUpload(
       reject_reason: null,
       reviewed_at: null,
       reviewed_by: null,
-      uploaded_by: user?.id ?? null,
+      uploaded_by: staffId,
     },
     { onConflict: "person_id,doc_type" },
   );
@@ -68,9 +67,7 @@ export async function reviewDocument(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const staffId = await currentStaffId();
 
   const { error } = await supabase
     .from("documents")
@@ -78,7 +75,7 @@ export async function reviewDocument(
       status,
       reject_reason: status === "ไม่ผ่าน" ? reason : null,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: user?.id ?? null,
+      reviewed_by: staffId,
     })
     .eq("id", id);
 
@@ -99,15 +96,11 @@ export async function openDocument(
   const supabase = await createClient();
 
   if (sensitive) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     await supabase.from("document_access_log").insert({
       person_id: personId,
       document_id: documentId,
       what: "เปิดดูเอกสารอ่อนไหว",
-      viewed_by: user?.id ?? null,
+      viewed_by: await currentStaffId(),
     });
   }
 
