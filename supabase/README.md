@@ -21,3 +21,15 @@ npm run db:types
 npx supabase login
 npx supabase link --project-ref encpmkhwxctcvcytfmuo
 ```
+
+## คำเตือนจาก Supabase advisor ที่ "ตั้งใจให้เป็นแบบนั้น"
+
+advisor จะเตือนว่า `read_national_id` · `set_national_id` · `merge_people`
+เป็น `SECURITY DEFINER` ที่ `authenticated` เรียกได้
+
+**ทั้งสามตัวตั้งใจให้เรียกได้** เพราะเป็นประตูเดียวที่ควบคุมไว้ ด่านตรวจอยู่ในตัวฟังก์ชันเอง
+(ต้องล็อกอิน · เขียน log ทุกครั้ง · merge ต้องเป็น admin) เหตุผลเต็มเขียนไว้ใน
+`comment on function` ของแต่ละตัว — อ่านก่อนคิดจะ revoke หรือเปลี่ยนเป็น security invoker
+
+เหลืออีกข้อที่ยังต้องทำด้วยมือ: เปิด **Leaked Password Protection**
+ที่ Dashboard → Authentication → Policies (แก้ในโค้ดไม่ได้)
