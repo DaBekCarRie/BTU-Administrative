@@ -1,13 +1,20 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
+import { useActionState, useMemo, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { FacultyWithPrograms } from "@/lib/data/master-data";
-import { createLead, editLead, type LeadFormState } from "../actions";
+import {
+  checkDuplicatePhone,
+  createLead,
+  editLead,
+  type LeadFormState,
+} from "../actions";
+import type { DuplicateMatch } from "@/lib/data/people";
 
 type StaffOption = { id: string; display_name: string };
 
@@ -88,6 +95,15 @@ export function LeadForm({
     {},
   );
   const [facultyId, setFacultyId] = useState(person?.facultyId ?? "");
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [, startCheck] = useTransition();
+
+  /** เตือนอย่างเดียว ไม่บล็อก — บางเบอร์ใช้ร่วมกันในครอบครัวจริง */
+  function checkPhone(value: string) {
+    startCheck(async () => {
+      setDuplicates(await checkDuplicatePhone(value, person?.id));
+    });
+  }
 
   const programs = useMemo(
     () => faculties.find((f) => f.id === facultyId)?.programs ?? [],
@@ -116,6 +132,7 @@ export function LeadForm({
             inputMode="tel"
             placeholder="0812345678"
             defaultValue={person?.phone ?? ""}
+            onBlur={(event) => checkPhone(event.target.value)}
           />
         </div>
 
@@ -232,6 +249,31 @@ export function LeadForm({
           defaultValue={person?.note ?? ""}
         />
       </div>
+
+      {duplicates.length > 0 ? (
+        <div
+          role="status"
+          data-testid="duplicate-warning"
+          className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm"
+        >
+          <p className="font-medium">เบอร์นี้มีอยู่แล้วในระบบ</p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {duplicates.map((match) => (
+              <li key={match.id}>
+                <Link
+                  href={`/leads/${match.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {match.fullName}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="text-muted-foreground mt-2 text-xs">
+            ถ้าเป็นคนละคนที่ใช้เบอร์เดียวกัน (เช่นเบอร์ของที่บ้าน) บันทึกต่อได้เลย
+          </p>
+        </div>
+      ) : null}
 
       {state.error ? (
         <p role="alert" data-testid="lead-error" className="text-destructive text-sm">

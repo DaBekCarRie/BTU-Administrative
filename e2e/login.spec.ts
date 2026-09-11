@@ -4,6 +4,9 @@ const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 
 test.describe("เข้าสู่ระบบ", () => {
+  // ไฟล์นี้ทดสอบการล็อกอินเอง จึงต้องเริ่มจากสถานะยังไม่ล็อกอิน
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test.skip(
     !EMAIL || !PASSWORD,
     "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD ใน .env.local",

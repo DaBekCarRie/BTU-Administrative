@@ -2,9 +2,12 @@ import "server-only";
 
 import {
   applyEvent,
+  rebuildState,
   type DomainEvent,
   type PersonState,
 } from "@/lib/domain/events";
+import { toDomainEvent } from "@/lib/domain/from-db";
+import { normalizePhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
@@ -297,4 +300,88 @@ export async function getPersonDetail(id: string) {
 
   if (error) throw new Error(`อ่านข้อมูลคนไม่สำเร็จ: ${error.message}`);
   return data;
+}
+
+export type DuplicateMatch = { id: string; fullName: string; phone: string | null };
+
+/** หาคนที่ใช้เบอร์นี้อยู่แล้ว — เตือนให้คนตัดสิน ไม่ได้บล็อก */
+export async function findByPhone(
+  phone: string,
+  excludeId?: string,
+): Promise<DuplicateMatch[]> {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return [];
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("people")
+    .select("id, full_name, phone")
+    .eq("phone", normalized)
+    .limit(5);
+
+  if (excludeId) query = query.neq("id", excludeId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`ตรวจเบอร์ซ้ำไม่สำเร็จ: ${error.message}`);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone,
+  }));
+}
+
+/**
+ * รวมสองรายการที่เป็นคนเดียวกัน
+ * ฐานข้อมูลย้ายเหตุการณ์ให้ แล้วเราคำนวณสถานะใหม่ด้วย projection ฝั่ง TS (ADR-0001)
+ */
+export async function mergePeople(
+  survivorId: string,
+  mergedId: string,
+): Promise<void> {
+  const supabase = await createClient();
+
+  const { data: survivor, error: readError } = await supabase
+    .from("people")
+    .select("*")
+    .eq("id", survivorId)
+    .maybeSingle();
+  if (readError) throw new Error(`อ่านข้อมูลคนไม่สำเร็จ: ${readError.message}`);
+  if (!survivor) throw new Error("ไม่พบรายการที่จะเก็บไว้");
+
+  const { error } = await supabase.rpc("merge_people", {
+    p_survivor_id: survivorId,
+    p_merged_id: mergedId,
+    p_details: toState(survivor) as never,
+  });
+  if (error) throw new Error(`รวมข้อมูลไม่สำเร็จ: ${error.message}`);
+
+  await rebuildPersonState(survivorId);
+}
+
+/** เล่นเหตุการณ์ทั้งหมดของคนหนึ่งใหม่ แล้วเขียนสถานะปัจจุบันทับ */
+export async function rebuildPersonState(personId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, type, occurred_at, payload")
+    .eq("person_id", personId)
+    .order("occurred_at")
+    .order("id");
+  if (error) throw new Error(`อ่านเหตุการณ์ไม่สำเร็จ: ${error.message}`);
+
+  const events = (data ?? [])
+    .map(toDomainEvent)
+    .filter((event): event is DomainEvent => event !== null);
+
+  if (events.length === 0) return;
+
+  const { error: writeError } = await supabase.rpc("rebuild_person_state", {
+    p_person_id: personId,
+    p_state: rebuildState(events) as never,
+  });
+  if (writeError) {
+    throw new Error(`เขียนสถานะใหม่ไม่สำเร็จ: ${writeError.message}`);
+  }
 }

@@ -3,19 +3,13 @@ import { expect, test } from "@playwright/test";
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("อีเมล").fill(EMAIL!);
-  await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
-  await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-  await expect(page).toHaveURL(/\/queue/);
-}
-
 async function createLead(page: import("@playwright/test").Page, name: string) {
   await page.goto("/leads/new");
   await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
   await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
   await expect(page).toHaveURL(/\/leads$/);
+  // ค้นหาแทนการพึ่งว่าจะอยู่หน้าแรก เพราะเทสต์อื่นสร้างข้อมูลคู่ขนานกันอยู่
+  await page.goto(`/leads?q=${encodeURIComponent(name)}`);
   await page.getByRole("link", { name }).click();
   await expect(page).toHaveURL(/\/leads\/[0-9a-f-]+$/);
 }
@@ -23,7 +17,11 @@ async function createLead(page: import("@playwright/test").Page, name: string) {
 test.describe("บันทึกผลการโทรและไทม์ไลน์", () => {
   test.skip(!EMAIL || !PASSWORD, "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD");
 
-  test.beforeEach(async ({ page }) => login(page));
+  // storageState ทำให้ล็อกอินอยู่แล้ว แต่ต้องเปิดหน้าใดหน้าหนึ่งก่อนถึงจะคลิกอะไรได้
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/queue");
+  });
+
 
   test("บันทึกผลโทรจบได้ใน 3 แตะ และสถานะเปลี่ยนตามผล", async ({ page }) => {
     await createLead(page, `โทร ${Date.now()}`);

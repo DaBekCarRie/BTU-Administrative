@@ -737,6 +737,10 @@ export type Database = {
         Args: { p_id: string; p_state: Json };
         Returns: undefined;
       };
+      merge_people: {
+        Args: { p_details: Json; p_merged_id: string; p_survivor_id: string };
+        Returns: undefined;
+      };
       read_national_id: { Args: { p_person_id: string }; Returns: string };
       rebuild_person_state: {
         Args: { p_person_id: string; p_state: Json };

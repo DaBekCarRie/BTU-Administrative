@@ -4,7 +4,12 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { recordEvent } from "@/lib/data/people";
+import {
+  findByPhone,
+  mergePeople,
+  recordEvent,
+  type DuplicateMatch,
+} from "@/lib/data/people";
 import {
   CALL_OUTCOMES,
   CLOSE_REASONS,
@@ -12,6 +17,7 @@ import {
   type PriorEducation,
   type StudyMode,
 } from "@/lib/domain/events";
+import { toDateInputValue } from "@/lib/date";
 import { normalizePhone } from "@/lib/phone";
 import { Constants } from "@/types/database";
 
@@ -74,13 +80,9 @@ export async function createLead(
   const details = readDetails(formData);
   if ("error" in details) return details;
 
-  const occurredAt = text(formData, "occurredAt");
-
   await recordEvent(randomUUID(), {
     type: "ติดต่อเข้ามา",
-    occurredAt: occurredAt
-      ? new Date(occurredAt).toISOString()
-      : new Date().toISOString(),
+    occurredAt: occurredAtAsInstant(text(formData, "occurredAt")),
     payload: { ...details, source: text(formData, "source") },
   });
 
@@ -109,6 +111,17 @@ export async function editLead(
   redirect("/leads");
 }
 
+/**
+ * แปลงวันที่จากฟอร์มเป็นเวลาจริง
+ * ถ้าเป็นวันนี้ใช้เวลาปัจจุบัน — ตั้งเป็นเที่ยงวันจะกลายเป็นเวลาอนาคตเมื่อบันทึกตอนเช้า
+ * แล้วรายการจะเรียงขึ้นเหนือสิ่งที่เพิ่งเกิดจริง ๆ
+ */
+function occurredAtAsInstant(date: string | null): string {
+  if (!date) return new Date().toISOString();
+  if (date === toDateInputValue()) return new Date().toISOString();
+  return new Date(`${date}T12:00:00+07:00`).toISOString();
+}
+
 /** บันทึกผลการโทร = เหตุการณ์ `โทรตาม` */
 export async function logCall(
   _prev: LeadFormState,
@@ -125,9 +138,7 @@ export async function logCall(
 
   await recordEvent(personId, {
     type: "โทรตาม",
-    occurredAt: occurredAtDate
-      ? new Date(`${occurredAtDate}T12:00:00+07:00`).toISOString()
-      : new Date().toISOString(),
+    occurredAt: occurredAtAsInstant(occurredAtDate),
     payload: {
       outcome,
       note: text(formData, "note"),
@@ -163,5 +174,33 @@ export async function closeLead(
   revalidatePath(`/leads/${personId}`);
   revalidatePath("/leads");
   revalidatePath("/queue");
+  return { ok: true };
+}
+
+/** ตรวจว่าเบอร์นี้มีคนใช้อยู่แล้วไหม — เตือนให้คนตัดสิน ไม่บล็อก */
+export async function checkDuplicatePhone(
+  phone: string,
+  excludeId?: string,
+): Promise<DuplicateMatch[]> {
+  return findByPhone(phone, excludeId);
+}
+
+/** รวมสองรายการที่เป็นคนเดียวกัน — หัวหน้าทีมเท่านั้น */
+export async function mergeLeads(
+  _prev: LeadFormState,
+  formData: FormData,
+): Promise<LeadFormState> {
+  const survivorId = text(formData, "survivorId");
+  const mergedId = text(formData, "mergedId");
+  if (!survivorId || !mergedId) return { error: "ต้องระบุทั้งสองรายการ" };
+
+  try {
+    await mergePeople(survivorId, mergedId);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "รวมข้อมูลไม่สำเร็จ" };
+  }
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${survivorId}`);
   return { ok: true };
 }

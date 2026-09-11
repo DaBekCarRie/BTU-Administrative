@@ -9,12 +9,9 @@ test.describe("ข้อมูลหลักคณะและสาขา", ()
     "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD ใน .env.local",
   );
 
+  // storageState ทำให้ล็อกอินอยู่แล้ว แต่ต้องเปิดหน้าใดหน้าหนึ่งก่อนถึงจะคลิกอะไรได้
   test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel("อีเมล").fill(EMAIL!);
-    await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
-    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-    await expect(page).toHaveURL(/\/queue/);
+    await page.goto("/queue");
   });
 
   test("เปิดจากเมนูแล้วเห็นคณะครบพร้อมสาขาที่อยู่ใต้แต่ละคณะ", async ({
@@ -40,7 +37,9 @@ test.describe("ข้อมูลหลักคณะและสาขา", ()
   });
 
   test("คนที่ยังไม่ล็อกอินเปิดหน้าข้อมูลหลักไม่ได้", async ({ browser }) => {
-    const anon = await browser.newContext();
+    const anon = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    });
     const page = await anon.newPage();
     await page.goto("/master-data");
     await expect(page).toHaveURL(/\/login/);

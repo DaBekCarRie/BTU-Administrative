@@ -7,6 +7,7 @@ import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
+import { MergeForm } from "./merge-form";
 import { LogCallDialog } from "@/components/log-call-dialog";
 
 /** สถานะการเรียนและการเงินเป็นสำเนาจากหน่วยงานอื่น (ADR-0003) */
@@ -206,6 +207,8 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
               ) : null}
             </dl>
           </div>
+
+          <MergeForm personId={person.id} phone={person.phone} />
 
           <CloseLeadForm
             personId={person.id}

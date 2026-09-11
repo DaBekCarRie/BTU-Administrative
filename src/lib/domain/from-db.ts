@@ -89,6 +89,20 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
       };
     }
 
+    case "รวมข้อมูล": {
+      const mergedId = str(payload.mergedId);
+      if (!mergedId) return null;
+      return {
+        type: "รวมข้อมูล",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: {
+          mergedId,
+          keep: details(asRecord(payload.keep)),
+        },
+      };
+    }
+
     default:
       return null;
   }

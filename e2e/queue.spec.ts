@@ -22,12 +22,9 @@ async function submitCall(page: import("@playwright/test").Page) {
 test.describe("คิวโทรวันนี้", () => {
   test.skip(!EMAIL || !PASSWORD, "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD");
 
+  // storageState ทำให้ล็อกอินอยู่แล้ว แต่ต้องเปิดหน้าใดหน้าหนึ่งก่อนถึงจะคลิกอะไรได้
   test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel("อีเมล").fill(EMAIL!);
-    await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
-    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-    await expect(page).toHaveURL(/\/queue/);
+    await page.goto("/queue");
   });
 
   test("นัดโทรพรุ่งนี้แล้ววันนี้ยังไม่ขึ้นคิว", async ({ page }) => {
@@ -35,6 +32,9 @@ test.describe("คิวโทรวันนี้", () => {
     await page.goto("/leads/new");
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
     await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
+    // ต้องรอให้ server action เสร็จก่อน ไม่งั้นการ navigate จะยกเลิกมันกลางคัน
+    await expect(page).toHaveURL(/\/leads$/);
+    await page.goto(`/leads?q=${encodeURIComponent(name)}`);
     await page.getByRole("link", { name }).click();
     await page.waitForURL(/\/leads\/[0-9a-f-]+$/);
 
@@ -56,6 +56,9 @@ test.describe("คิวโทรวันนี้", () => {
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
     await page.getByLabel("เบอร์โทร").fill("0955556666");
     await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
+    // ต้องรอให้ server action เสร็จก่อน ไม่งั้นการ navigate จะยกเลิกมันกลางคัน
+    await expect(page).toHaveURL(/\/leads$/);
+    await page.goto(`/leads?q=${encodeURIComponent(name)}`);
     await page.getByRole("link", { name }).click();
     await page.waitForURL(/\/leads\/[0-9a-f-]+$/);
 
@@ -79,6 +82,9 @@ test.describe("คิวโทรวันนี้", () => {
     await page.goto("/leads/new");
     await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
     await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
+    // ต้องรอให้ server action เสร็จก่อน ไม่งั้นการ navigate จะยกเลิกมันกลางคัน
+    await expect(page).toHaveURL(/\/leads$/);
+    await page.goto(`/leads?q=${encodeURIComponent(name)}`);
     await page.getByRole("link", { name }).click();
     await page.waitForURL(/\/leads\/[0-9a-f-]+$/);
     const personUrl = page.url();

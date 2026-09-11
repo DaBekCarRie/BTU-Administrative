@@ -332,3 +332,64 @@ describe("ตามได้ไม่จำกัดจำนวนครั้�
     expect(state.lastEventAt).toBe(new Date(Date.UTC(2026, 8, 20, 3)).toISOString());
   });
 });
+
+describe("รวมข้อมูล", () => {
+  const keepDetails: PersonDetails = { ...details, fullName: "รายการที่เก็บไว้" };
+
+  it("ข้อมูลของรายการที่เหลือรอดต้องชนะ แม้เหตุการณ์ของอีกฝั่งจะเก่ากว่า", () => {
+    // เหตุการณ์ของอีกฝั่งเกิดก่อน แล้วถูกย้ายมาอยู่กับรายการที่เหลือรอด
+    const timeline: DomainEvent[] = [
+      {
+        type: "ติดต่อเข้ามา",
+        occurredAt: "2026-08-01T03:00:00.000Z",
+        sequence: 1,
+        payload: { ...details, fullName: "รายการที่ถูกรวม" },
+      },
+      {
+        type: "ติดต่อเข้ามา",
+        occurredAt: "2026-09-01T03:00:00.000Z",
+        sequence: 2,
+        payload: keepDetails,
+      },
+      {
+        type: "รวมข้อมูล",
+        occurredAt: "2026-09-10T03:00:00.000Z",
+        sequence: 3,
+        payload: { mergedId: "00000000-0000-0000-0000-000000000001", keep: keepDetails },
+      },
+    ];
+
+    const state = rebuildState(timeline);
+
+    expect(state.fullName).toBe("รายการที่เก็บไว้");
+    // แต่ยังนับวันที่ติดต่อครั้งแรกจากของที่เก่าที่สุด
+    expect(state.firstContactedAt).toBe("2026-08-01T03:00:00.000Z");
+  });
+
+  it("ประวัติของทั้งสองฝั่งยังอยู่ครบ ไม่มีอะไรหาย", () => {
+    const timeline: DomainEvent[] = [
+      { ...contacted, occurredAt: "2026-08-01T03:00:00.000Z", sequence: 1 },
+      {
+        type: "โทรตาม",
+        occurredAt: "2026-08-05T03:00:00.000Z",
+        sequence: 2,
+        payload: { outcome: "ไม่รับสาย" },
+      },
+      {
+        type: "ติดต่อเข้ามา",
+        occurredAt: "2026-09-01T03:00:00.000Z",
+        sequence: 3,
+        payload: keepDetails,
+      },
+      {
+        type: "รวมข้อมูล",
+        occurredAt: "2026-09-10T03:00:00.000Z",
+        sequence: 4,
+        payload: { mergedId: "00000000-0000-0000-0000-000000000001", keep: keepDetails },
+      },
+    ];
+
+    expect(() => rebuildState(timeline)).not.toThrow();
+    expect(rebuildState(timeline).lastEventAt).toBe("2026-09-10T03:00:00.000Z");
+  });
+});

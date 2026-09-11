@@ -6,12 +6,9 @@ const PASSWORD = process.env.E2E_PASSWORD;
 test.describe("ค้นหา กรอง ส่งออก", () => {
   test.skip(!EMAIL || !PASSWORD, "ต้องตั้ง E2E_EMAIL และ E2E_PASSWORD");
 
+  // storageState ทำให้ล็อกอินอยู่แล้ว แต่ต้องเปิดหน้าใดหน้าหนึ่งก่อนถึงจะคลิกอะไรได้
   test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel("อีเมล").fill(EMAIL!);
-    await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
-    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-    await expect(page).toHaveURL(/\/queue/);
+    await page.goto("/queue");
   });
 
   test("ค้นชื่อไทยแบบพิมพ์ไม่ครบก็เจอ — ศิริ ต้องเจอ ศิริพร", async ({ page }) => {

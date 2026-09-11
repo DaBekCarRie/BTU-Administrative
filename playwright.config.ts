@@ -18,7 +18,14 @@ export default defineConfig({
     locale: "th-TH",
     timezoneId: "Asia/Bangkok",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/user.json" },
+      dependencies: ["setup"],
+    },
+  ],
   webServer: {
     // รันกับ production build ไม่ใช่ dev server
     // dev server คอมไพล์ route ตอนถูกเรียกครั้งแรก พอหลาย worker ยิงพร้อมกันจะ timeout

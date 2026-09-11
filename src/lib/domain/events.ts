@@ -112,6 +112,18 @@ export type DomainEvent =
   | (EventBase & {
       type: "ปิดเคส";
       payload: { reason: CloseReason; note?: string | null };
+    })
+  | (EventBase & {
+      type: "รวมข้อมูล";
+      payload: {
+        mergedId: string;
+        /**
+         * ข้อมูลของรายการที่เหลือรอด ณ เวลาที่รวม
+         * ต้องพกมาด้วย ไม่งั้นตอนเล่นเหตุการณ์ซ้ำ `ติดต่อเข้ามา` ของอีกฝั่งซึ่งเก่ากว่า
+         * จะมาก่อน แล้วรายการที่เหลือรอดจะถูกเปลี่ยนชื่อเป็นของอีกฝั่ง
+         */
+        keep?: Partial<PersonDetails>;
+      };
     });
 
 /**
@@ -254,6 +266,17 @@ export function applyEvent(
         ...state,
         followUpStatus: event.payload.reason,
         nextCallAt: null,
+        lastEventAt: later(state.lastEventAt, event.occurredAt),
+      };
+    }
+
+    case "รวมข้อมูล": {
+      if (!state) {
+        throw new Error("รวมข้อมูลเข้ารายการที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      }
+      return {
+        ...state,
+        ...applyDetails(state, event.payload.keep ?? {}),
         lastEventAt: later(state.lastEventAt, event.occurredAt),
       };
     }
