@@ -1,0 +1,8 @@
+export default function Page() {
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-semibold">ผู้สนใจ</h1>
+      <p className="text-muted-foreground mt-1 text-sm">ยังไม่ได้พัฒนา — ดู docs/PROMPT-design.md artboard 2</p>
+    </div>
+  );
+}
