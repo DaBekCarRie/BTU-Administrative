@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:types": "supabase gen types typescript --linked > src/types/database.ts",
     "db:push": "supabase db push",
-    "db:diff": "supabase db diff"
+    "db:diff": "supabase db diff",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -39,10 +40,12 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "supabase": "^2.117.0",
