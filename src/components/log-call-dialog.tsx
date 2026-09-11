@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -15,8 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toDateInputValue } from "@/lib/date";
 import { CALL_OUTCOMES, type CallOutcome } from "@/lib/domain/events";
-import { logCall } from "../actions";
+import { logCall } from "@/app/(app)/leads/actions";
 
 /** ตัวเลือกลัดของวันนัดครั้งถัดไป — ลดการเปิดปฏิทินในงานที่ทำวันละหลายสิบครั้ง */
 const QUICK_DAYS = [
@@ -31,19 +33,20 @@ const CLOSING: ReadonlySet<CallOutcome> = new Set([
   "สมัครแล้ว",
 ]);
 
-function addDays(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
+
 
 export function LogCallDialog({
   personId,
   personName,
+  triggerLabel = "บันทึกผลโทร",
+  triggerSize,
 }: {
   personId: string;
   personName: string;
+  triggerLabel?: string;
+  triggerSize?: "sm" | "default";
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [nextCallDate, setNextCallDate] = useState("");
@@ -66,13 +69,16 @@ export function LogCallDialog({
       setOutcome(null);
       setNextCallDate("");
       toast.success("บันทึกผลโทรแล้ว");
+      router.refresh();
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button data-testid="open-log-call">บันทึกผลโทร</Button>
+        <Button size={triggerSize} data-testid={`open-log-call-${personId}`}>
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-y-auto sm:max-w-md">
@@ -117,9 +123,9 @@ export function LogCallDialog({
                     type="button"
                     size="sm"
                     variant={
-                      nextCallDate === addDays(quick.days) ? "default" : "outline"
+                      nextCallDate === toDateInputValue(quick.days) ? "default" : "outline"
                     }
-                    onClick={() => setNextCallDate(addDays(quick.days))}
+                    onClick={() => setNextCallDate(toDateInputValue(quick.days))}
                   >
                     {quick.label}
                   </Button>
@@ -141,7 +147,7 @@ export function LogCallDialog({
               id="occurredAt"
               name="occurredAt"
               type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={toDateInputValue()}
             />
             <p className="text-muted-foreground text-xs">
               แก้เป็นวันย้อนหลังได้ ถ้าโทรไปแล้วเพิ่งมาบันทึก

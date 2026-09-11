@@ -44,3 +44,13 @@ export function daysOverdue(value: DateInput): number | null {
  * อย่าเขียน +543 กระจายไว้ตามหน้าจอ
  */
 export { dayjs };
+
+/**
+ * ค่า YYYY-MM-DD สำหรับ <input type="date"> โดยอิงวันตามเวลาไทย
+ *
+ * ห้ามใช้ `new Date().toISOString().slice(0,10)` แทน เพราะ toISOString แปลงเป็น UTC
+ * ช่วงเที่ยงคืนถึง 7 โมงเช้าเวลาไทย UTC ยังเป็นเมื่อวาน วันที่จะเพี้ยนไปหนึ่งวัน
+ */
+export function toDateInputValue(offsetDays = 0): string {
+  return dayjs().tz(TZ).add(offsetDays, "day").format("YYYY-MM-DD");
+}

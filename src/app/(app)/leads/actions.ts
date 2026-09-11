@@ -126,13 +126,13 @@ export async function logCall(
   await recordEvent(personId, {
     type: "โทรตาม",
     occurredAt: occurredAtDate
-      ? new Date(`${occurredAtDate}T12:00:00`).toISOString()
+      ? new Date(`${occurredAtDate}T12:00:00+07:00`).toISOString()
       : new Date().toISOString(),
     payload: {
       outcome,
       note: text(formData, "note"),
       nextCallAt: nextCallDate
-        ? new Date(`${nextCallDate}T09:00:00`).toISOString()
+        ? new Date(`${nextCallDate}T09:00:00+07:00`).toISOString()
         : null,
     },
   });

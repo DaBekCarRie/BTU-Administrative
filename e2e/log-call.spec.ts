@@ -29,7 +29,7 @@ test.describe("บันทึกผลการโทรและไทม์�
     await createLead(page, `โทร ${Date.now()}`);
 
     // แตะ 1: เปิด · แตะ 2: เลือกผล · แตะ 3: บันทึก
-    await page.getByTestId("open-log-call").click();
+    await page.getByTestId(/^open-log-call-/).click();
     await page.getByTestId("outcome-คุยแล้วสนใจ").click();
     await page.getByTestId("submit-log-call").click();
 
@@ -40,7 +40,7 @@ test.describe("บันทึกผลการโทรและไทม์�
   test("นัดโทรครั้งถัดไปแบบลัดได้", async ({ page }) => {
     await createLead(page, `นัด ${Date.now()}`);
 
-    await page.getByTestId("open-log-call").click();
+    await page.getByTestId(/^open-log-call-/).click();
     await page.getByTestId("outcome-นัดโทรใหม่").click();
     await page.getByRole("button", { name: "1 สัปดาห์" }).click();
     await page.getByTestId("submit-log-call").click();
@@ -53,13 +53,13 @@ test.describe("บันทึกผลการโทรและไทม์�
     await createLead(page, `ย้อนหลัง ${Date.now()}`);
 
     // ครั้งแรกบันทึกเป็นวันนี้
-    await page.getByTestId("open-log-call").click();
+    await page.getByTestId(/^open-log-call-/).click();
     await page.getByTestId("outcome-ไม่รับสาย").click();
     await page.getByTestId("submit-log-call").click();
     await expect(page.getByTestId("timeline")).toContainText("โทรตาม");
 
     // ครั้งที่สองบันทึกย้อนหลังไปปีก่อน ต้องไปอยู่ล่างสุดของไทม์ไลน์
-    await page.getByTestId("open-log-call").click();
+    await page.getByTestId(/^open-log-call-/).click();
     await page.getByTestId("outcome-ขอคิดดูก่อน").click();
     await page.getByLabel("วันที่โทรจริง").fill("2025-01-15");
     await page.getByTestId("submit-log-call").click();

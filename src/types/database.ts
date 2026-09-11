@@ -13,12 +13,274 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+type Enum<T extends keyof Database["public"]["Enums"]> =
+  Database["public"]["Enums"][T];
+
 export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
+  __InternalSupabase: { PostgrestVersion: "14.5" };
   public: {
     Tables: {
+      answers: {
+        Row: {
+          answer: string;
+          confirmed_at: string | null;
+          confirmed_by: string | null;
+          created_at: string;
+          id: string;
+          question: string;
+          source: string | null;
+          updated_at: string;
+          view_count: number;
+          visibility: Enum<"answer_visibility">;
+        };
+        Insert: {
+          answer: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          id?: string;
+          question: string;
+          source?: string | null;
+          updated_at?: string;
+          view_count?: number;
+          visibility?: Enum<"answer_visibility">;
+        };
+        Update: {
+          answer?: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          id?: string;
+          question?: string;
+          source?: string | null;
+          updated_at?: string;
+          view_count?: number;
+          visibility?: Enum<"answer_visibility">;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "answers_confirmed_by_fkey";
+            columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      applications: {
+        Row: {
+          academic_year: number;
+          created_at: string;
+          faculty_id: string | null;
+          id: string;
+          note: string | null;
+          person_id: string;
+          prior_education: Enum<"prior_education"> | null;
+          program_id: string | null;
+          status: Enum<"application_status">;
+          student_code: string | null;
+          study_mode: Enum<"study_mode"> | null;
+          term: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year: number;
+          created_at?: string;
+          faculty_id?: string | null;
+          id?: string;
+          note?: string | null;
+          person_id: string;
+          prior_education?: Enum<"prior_education"> | null;
+          program_id?: string | null;
+          status?: Enum<"application_status">;
+          student_code?: string | null;
+          study_mode?: Enum<"study_mode"> | null;
+          term?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year?: number;
+          created_at?: string;
+          faculty_id?: string | null;
+          id?: string;
+          note?: string | null;
+          person_id?: string;
+          prior_education?: Enum<"prior_education"> | null;
+          program_id?: string | null;
+          status?: Enum<"application_status">;
+          student_code?: string | null;
+          study_mode?: Enum<"study_mode"> | null;
+          term?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "applications_faculty_id_fkey";
+            columns: ["faculty_id"];
+            isOneToOne: false;
+            referencedRelation: "faculties";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "applications_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "applications_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "applications_program_id_fkey";
+            columns: ["program_id"];
+            isOneToOne: false;
+            referencedRelation: "programs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      document_access_log: {
+        Row: {
+          document_id: string | null;
+          id: number;
+          person_id: string;
+          viewed_at: string;
+          viewed_by: string | null;
+          what: string;
+        };
+        Insert: {
+          document_id?: string | null;
+          id?: never;
+          person_id: string;
+          viewed_at?: string;
+          viewed_by?: string | null;
+          what: string;
+        };
+        Update: {
+          document_id?: string | null;
+          id?: never;
+          person_id?: string;
+          viewed_at?: string;
+          viewed_by?: string | null;
+          what?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "document_access_log_document_id_fkey";
+            columns: ["document_id"];
+            isOneToOne: false;
+            referencedRelation: "documents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "document_access_log_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "document_access_log_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "document_access_log_viewed_by_fkey";
+            columns: ["viewed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      documents: {
+        Row: {
+          application_id: string | null;
+          created_at: string;
+          doc_type: Enum<"doc_type">;
+          id: string;
+          person_id: string;
+          reject_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Enum<"doc_status">;
+          storage_path: string;
+          updated_at: string;
+          uploaded_by: string | null;
+        };
+        Insert: {
+          application_id?: string | null;
+          created_at?: string;
+          doc_type: Enum<"doc_type">;
+          id?: string;
+          person_id: string;
+          reject_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Enum<"doc_status">;
+          storage_path: string;
+          updated_at?: string;
+          uploaded_by?: string | null;
+        };
+        Update: {
+          application_id?: string | null;
+          created_at?: string;
+          doc_type?: Enum<"doc_type">;
+          id?: string;
+          person_id?: string;
+          reject_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Enum<"doc_status">;
+          storage_path?: string;
+          updated_at?: string;
+          uploaded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "documents_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_uploaded_by_fkey";
+            columns: ["uploaded_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       events: {
         Row: {
           id: number;
@@ -27,7 +289,7 @@ export type Database = {
           person_id: string;
           recorded_at: string;
           recorded_by: string | null;
-          type: Database["public"]["Enums"]["event_type"];
+          type: Enum<"event_type">;
         };
         Insert: {
           id?: never;
@@ -36,7 +298,7 @@ export type Database = {
           person_id: string;
           recorded_at?: string;
           recorded_by?: string | null;
-          type: Database["public"]["Enums"]["event_type"];
+          type: Enum<"event_type">;
         };
         Update: {
           id?: never;
@@ -45,7 +307,7 @@ export type Database = {
           person_id?: string;
           recorded_at?: string;
           recorded_by?: string | null;
-          type?: Database["public"]["Enums"]["event_type"];
+          type?: Enum<"event_type">;
         };
         Relationships: [
           {
@@ -56,10 +318,65 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "events_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "events_recorded_by_fkey";
             columns: ["recorded_by"];
             isOneToOne: false;
             referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      exam_center_requests: {
+        Row: {
+          academic_year: number;
+          center_name: string;
+          created_at: string;
+          id: string;
+          note: string | null;
+          person_id: string;
+          status: Enum<"exam_request_status">;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year: number;
+          center_name: string;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          person_id: string;
+          status?: Enum<"exam_request_status">;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year?: number;
+          center_name?: string;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          person_id?: string;
+          status?: Enum<"exam_request_status">;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "exam_center_requests_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "exam_center_requests_person_id_fkey";
+            columns: ["person_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
             referencedColumns: ["id"];
           },
         ];
@@ -91,81 +408,180 @@ export type Database = {
         };
         Relationships: [];
       };
+      merged_people: {
+        Row: {
+          merged_at: string;
+          merged_by: string | null;
+          merged_id: string;
+          survivor_id: string;
+        };
+        Insert: {
+          merged_at?: string;
+          merged_by?: string | null;
+          merged_id: string;
+          survivor_id: string;
+        };
+        Update: {
+          merged_at?: string;
+          merged_by?: string | null;
+          merged_id?: string;
+          survivor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "merged_people_merged_by_fkey";
+            columns: ["merged_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "merged_people_survivor_id_fkey";
+            columns: ["survivor_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "merged_people_survivor_id_fkey";
+            columns: ["survivor_id"];
+            isOneToOne: false;
+            referencedRelation: "people_with_call_summary";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payments: {
+        Row: {
+          amount: number;
+          application_id: string;
+          created_at: string;
+          id: string;
+          note: string | null;
+          paid_at: string;
+          receipt_no: string | null;
+          recorded_by: string | null;
+          slip_path: string | null;
+        };
+        Insert: {
+          amount: number;
+          application_id: string;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          paid_at: string;
+          receipt_no?: string | null;
+          recorded_by?: string | null;
+          slip_path?: string | null;
+        };
+        Update: {
+          amount?: number;
+          application_id?: string;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          paid_at?: string;
+          receipt_no?: string | null;
+          recorded_by?: string | null;
+          slip_path?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payments_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_recorded_by_fkey";
+            columns: ["recorded_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       people: {
         Row: {
           created_at: string;
-          enrollment_status: Database["public"]["Enums"]["enrollment_status"];
+          credit_balance: number;
+          enrollment_status: Enum<"enrollment_status">;
           enrollment_status_confirmed_at: string | null;
           facebook_name: string | null;
           faculty_id: string | null;
           first_contacted_at: string;
-          follow_up_status: Database["public"]["Enums"]["follow_up_status"];
+          follow_up_status: Enum<"follow_up_status">;
           full_name: string;
           id: string;
           last_event_at: string;
           line_id: string | null;
+          national_id_enc: string | null;
+          national_id_last4: string | null;
           next_call_at: string | null;
           nickname: string | null;
           note: string | null;
           owner_id: string | null;
-          payment_status: Database["public"]["Enums"]["payment_status"];
+          payment_status: Enum<"payment_status">;
           payment_status_confirmed_at: string | null;
           phone: string | null;
-          prior_education: Database["public"]["Enums"]["prior_education"] | null;
+          prior_education: Enum<"prior_education"> | null;
           program_id: string | null;
-          study_mode: Database["public"]["Enums"]["study_mode"] | null;
+          study_mode: Enum<"study_mode"> | null;
           updated_at: string;
         };
         Insert: {
           created_at?: string;
-          enrollment_status?: Database["public"]["Enums"]["enrollment_status"];
+          credit_balance?: number;
+          enrollment_status?: Enum<"enrollment_status">;
           enrollment_status_confirmed_at?: string | null;
           facebook_name?: string | null;
           faculty_id?: string | null;
           first_contacted_at: string;
-          follow_up_status?: Database["public"]["Enums"]["follow_up_status"];
+          follow_up_status?: Enum<"follow_up_status">;
           full_name: string;
           id: string;
           last_event_at: string;
           line_id?: string | null;
+          national_id_enc?: string | null;
+          national_id_last4?: string | null;
           next_call_at?: string | null;
           nickname?: string | null;
           note?: string | null;
           owner_id?: string | null;
-          payment_status?: Database["public"]["Enums"]["payment_status"];
+          payment_status?: Enum<"payment_status">;
           payment_status_confirmed_at?: string | null;
           phone?: string | null;
-          prior_education?:
-            | Database["public"]["Enums"]["prior_education"]
-            | null;
+          prior_education?: Enum<"prior_education"> | null;
           program_id?: string | null;
-          study_mode?: Database["public"]["Enums"]["study_mode"] | null;
+          study_mode?: Enum<"study_mode"> | null;
           updated_at?: string;
         };
         Update: {
           created_at?: string;
-          enrollment_status?: Database["public"]["Enums"]["enrollment_status"];
+          credit_balance?: number;
+          enrollment_status?: Enum<"enrollment_status">;
           enrollment_status_confirmed_at?: string | null;
           facebook_name?: string | null;
           faculty_id?: string | null;
           first_contacted_at?: string;
-          follow_up_status?: Database["public"]["Enums"]["follow_up_status"];
+          follow_up_status?: Enum<"follow_up_status">;
           full_name?: string;
           id?: string;
           last_event_at?: string;
           line_id?: string | null;
+          national_id_enc?: string | null;
+          national_id_last4?: string | null;
           next_call_at?: string | null;
           nickname?: string | null;
           note?: string | null;
           owner_id?: string | null;
-          payment_status?: Database["public"]["Enums"]["payment_status"];
+          payment_status?: Enum<"payment_status">;
           payment_status_confirmed_at?: string | null;
           phone?: string | null;
-          prior_education?:
-            | Database["public"]["Enums"]["prior_education"]
-            | null;
+          prior_education?: Enum<"prior_education"> | null;
           program_id?: string | null;
-          study_mode?: Database["public"]["Enums"]["study_mode"] | null;
+          study_mode?: Enum<"study_mode"> | null;
           updated_at?: string;
         };
         Relationships: [
@@ -259,13 +675,69 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      people_with_call_summary: {
+        Row: {
+          call_count: number | null;
+          created_at: string | null;
+          credit_balance: number | null;
+          enrollment_status: Enum<"enrollment_status"> | null;
+          enrollment_status_confirmed_at: string | null;
+          facebook_name: string | null;
+          faculty_id: string | null;
+          first_contacted_at: string | null;
+          follow_up_status: Enum<"follow_up_status"> | null;
+          full_name: string | null;
+          id: string | null;
+          last_call_at: string | null;
+          last_call_note: string | null;
+          last_call_outcome: string | null;
+          last_event_at: string | null;
+          line_id: string | null;
+          national_id_enc: string | null;
+          national_id_last4: string | null;
+          next_call_at: string | null;
+          nickname: string | null;
+          note: string | null;
+          owner_id: string | null;
+          payment_status: Enum<"payment_status"> | null;
+          payment_status_confirmed_at: string | null;
+          phone: string | null;
+          prior_education: Enum<"prior_education"> | null;
+          program_id: string | null;
+          study_mode: Enum<"study_mode"> | null;
+          updated_at: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "people_faculty_id_fkey";
+            columns: ["faculty_id"];
+            isOneToOne: false;
+            referencedRelation: "faculties";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "people_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "people_program_id_fkey";
+            columns: ["program_id"];
+            isOneToOne: false;
+            referencedRelation: "programs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       apply_person_state: {
         Args: { p_id: string; p_state: Json };
         Returns: undefined;
       };
+      read_national_id: { Args: { p_person_id: string }; Returns: string };
       rebuild_person_state: {
         Args: { p_person_id: string; p_state: Json };
         Returns: undefined;
@@ -276,12 +748,30 @@ export type Database = {
           p_payload: Json;
           p_person_id: string;
           p_state: Json;
-          p_type: Database["public"]["Enums"]["event_type"];
+          p_type: Enum<"event_type">;
         };
         Returns: string;
       };
+      set_national_id: {
+        Args: { p_national_id: string; p_person_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
+      answer_visibility: "ตอบผู้สนใจได้" | "ใช้ภายในเท่านั้น";
+      application_status:
+        | "ร่าง"
+        | "รอเอกสาร"
+        | "รอชำระเงิน"
+        | "รอตรวจสอบ"
+        | "อนุมัติ"
+        | "ยกเลิก";
+      doc_status: "ส่งแล้ว" | "ผ่าน" | "ไม่ผ่าน";
+      doc_type:
+        | "รูปถ่าย"
+        | "วุฒิการศึกษา"
+        | "สำเนาบัตรประชาชน"
+        | "สำเนาทะเบียนบ้าน";
       enrollment_status:
         | "ยังไม่เริ่ม"
         | "เรียนอยู่"
@@ -303,7 +793,9 @@ export type Database = {
         | "ลาออก"
         | "ขอศูนย์สอบพิเศษ"
         | "ถอนคำขอศูนย์สอบ"
-        | "แก้ไขข้อมูล";
+        | "แก้ไขข้อมูล"
+        | "รวมข้อมูล";
+      exam_request_status: "ขอแล้ว" | "ยืนยันแล้ว" | "ถอนแล้ว";
       follow_up_status:
         | "ใหม่"
         | "กำลังติดตาม"
@@ -322,17 +814,15 @@ export type Database = {
         | "อื่นๆ";
       study_mode: "ปกติ" | "สมทบ" | "ทางไกล";
     };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
+    CompositeTypes: Record<string, never>;
   };
 };
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
-type DefaultSchema = DatabaseWithoutInternals["public"];
+type DefaultSchema = Database["public"];
 
-export type Tables<T extends keyof DefaultSchema["Tables"]> =
-  DefaultSchema["Tables"][T]["Row"];
+export type Tables<
+  T extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"]),
+> = (DefaultSchema["Tables"] & DefaultSchema["Views"])[T]["Row"];
 export type TablesInsert<T extends keyof DefaultSchema["Tables"]> =
   DefaultSchema["Tables"][T]["Insert"];
 export type TablesUpdate<T extends keyof DefaultSchema["Tables"]> =
@@ -343,13 +833,24 @@ export type Enums<T extends keyof DefaultSchema["Enums"]> =
 export const Constants = {
   public: {
     Enums: {
-      enrollment_status: [
-        "ยังไม่เริ่ม",
-        "เรียนอยู่",
-        "ดรอป",
-        "ลาออก",
-        "จบแล้ว",
+      answer_visibility: ["ตอบผู้สนใจได้", "ใช้ภายในเท่านั้น"],
+      application_status: [
+        "ร่าง",
+        "รอเอกสาร",
+        "รอชำระเงิน",
+        "รอตรวจสอบ",
+        "อนุมัติ",
+        "ยกเลิก",
       ],
+      doc_status: ["ส่งแล้ว", "ผ่าน", "ไม่ผ่าน"],
+      doc_type: [
+        "รูปถ่าย",
+        "วุฒิการศึกษา",
+        "สำเนาบัตรประชาชน",
+        "สำเนาทะเบียนบ้าน",
+      ],
+      enrollment_status: ["ยังไม่เริ่ม", "เรียนอยู่", "ดรอป", "ลาออก", "จบแล้ว"],
+      exam_request_status: ["ขอแล้ว", "ยืนยันแล้ว", "ถอนแล้ว"],
       follow_up_status: [
         "ใหม่",
         "กำลังติดตาม",
