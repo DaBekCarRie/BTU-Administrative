@@ -129,4 +129,56 @@ test.describe("คิวโทรวันนี้", () => {
     // สนใจสมัครแล้ว ไม่มีนัดครั้งถัดไป จึงหายจากคิว
     await expect(page.locator("tr", { hasText: name })).toHaveCount(0);
   });
+
+  test("แสดง Summary Strip และสลับซ่อน/แสดงกระดานงานได้", async ({ page }) => {
+    await page.goto("/queue");
+
+    // ตรวจสอบ Summary Strip
+    const strip = page.getByTestId("totals-strip");
+    await expect(strip).toBeVisible();
+    await expect(strip).toContainText("ค้างโทร");
+    await expect(strip).toContainText("โทรแล้ว");
+
+    // ตรวจสอบ Workboard Tiles และปุ่มสลับ
+    const board = page.getByTestId("work-board");
+    await expect(board).toBeVisible();
+
+    const toggleBtn = strip.getByRole("button", { name: "ซ่อนกระดานงาน" });
+    await toggleBtn.click();
+    await expect(board).toBeHidden();
+
+    const showBtn = strip.getByRole("button", { name: "ดูกระดานงาน" });
+    await showBtn.click();
+    await expect(board).toBeVisible();
+  });
+
+  test("บนมือถือเปิดบันทึกผลโทรเป็น Bottom Sheet", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const name = uniqueName("คิวมือถือ");
+    const today = bangkokToday();
+
+    await page.goto("/leads/new");
+    await page.getByLabel("ชื่อ–สกุล หรือชื่อ Facebook").fill(name);
+    await page.getByRole("button", { name: "บันทึกผู้สนใจ" }).click();
+    await page.getByRole("link", { name }).click();
+    await page.getByTestId(/^open-log-call-/).click();
+    await page.getByTestId("outcome-ขอคิดดูก่อน").click();
+    await page.getByLabel("เลือกวันเอง").fill(today);
+    await submitCall(page);
+
+    await page.goto("/queue");
+    const card = page.locator("article", { hasText: name });
+    await expect(card).toBeVisible();
+
+    // แตะเปิดบันทึกผลโทรบนการ์ดมือถือ
+    await card.getByTestId(/^open-log-call-/).click();
+
+    // ตรวจสอบ Bottom Sheet
+    const sheet = page.getByRole("dialog", { name: "บันทึกการโทร" });
+    await expect(sheet).toBeVisible();
+    await sheet.getByTestId("outcome-คุยแล้วสนใจ").click();
+    await submitCall(page);
+
+    await expect(page.locator("article", { hasText: name })).toHaveCount(0);
+  });
 });

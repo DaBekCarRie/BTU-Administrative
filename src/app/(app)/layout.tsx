@@ -1,16 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/app-shell";
+import { getCallQueue } from "@/lib/data/call-queue";
+import { getWorkBoard } from "@/lib/data/work-board";
 import { createClient } from "@/lib/supabase/server";
-
-const NAV = [
-  { href: "/queue", label: "คิวโทรวันนี้" },
-  { href: "/leads", label: "ผู้สนใจ" },
-  { href: "/documents", label: "เอกสาร" },
-  { href: "/exams", label: "ศูนย์สอบพิเศษ" },
-  { href: "/faq", label: "คำถามที่พบบ่อย" },
-] as const;
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const supabase = await createClient();
@@ -31,63 +24,23 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   if (!staff) redirect("/login?error=no-staff");
 
+  // ดึงตัวเลขงานค้างสำหรับแสดง Badge ในเมนูนำทาง
+  const [queueResult, boardResult] = await Promise.all([
+    getCallQueue().catch(() => ({ total: 0 })),
+    getWorkBoard().catch(() => ({ incompleteDocuments: 0 })),
+  ]);
+
+  const badgeCounts = {
+    queue: queueResult?.total ?? 0,
+    documents: boardResult?.incompleteDocuments ?? 0,
+  };
+
   return (
-    <div className="flex min-h-full">
-      <aside className="bg-sidebar hidden w-56 shrink-0 flex-col border-r md:flex">
-        <div className="border-b px-4 py-4">
-          <p className="text-sm leading-tight font-semibold">
-            ระบบผู้สนใจ–ผู้เรียน
-          </p>
-          <p className="text-muted-foreground text-xs">ทีม LMS · BTU</p>
-        </div>
-
-        <nav className="flex flex-col gap-0.5 p-2">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="hover:bg-accent hover:text-accent-foreground rounded-md px-3 py-2 text-sm transition-colors"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="mt-auto border-t p-3">
-          {staff.role === "admin" ? (
-            <Link
-              href="/access-log"
-              className="text-muted-foreground hover:text-foreground mb-2 block text-xs underline-offset-4 hover:underline"
-            >
-              ร่องรอยการเข้าถึง
-            </Link>
-          ) : null}
-          <Link
-            href="/master-data"
-            className="text-muted-foreground hover:text-foreground mb-3 block text-xs underline-offset-4 hover:underline"
-          >
-            ข้อมูลหลัก (คณะ/สาขา)
-          </Link>
-          <p className="truncate text-sm font-medium" data-testid="current-user">
-            {staff.display_name}
-          </p>
-          <p className="text-muted-foreground mb-2 text-xs">
-            {staff.role === "admin" ? "หัวหน้าทีม" : "เจ้าหน้าที่"}
-          </p>
-          <form action="/auth/signout" method="post">
-            <Button
-              type="submit"
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              ออกจากระบบ
-            </Button>
-          </form>
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1">{children}</main>
-    </div>
+    <AppShell
+      staff={{ display_name: staff.display_name, role: staff.role }}
+      badgeCounts={badgeCounts}
+    >
+      {children}
+    </AppShell>
   );
 }

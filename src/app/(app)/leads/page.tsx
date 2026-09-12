@@ -1,23 +1,11 @@
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { listPeople, listStaffOptions } from "@/lib/data/people";
 import { parseFilters, toSearchParams } from "@/lib/data/people-filters";
-import { formatThaiDate } from "@/lib/date";
-import { formatPhone } from "@/lib/phone";
 import { LeadFilters } from "./filters";
-
-const HEADERS = [
-  "ชื่อ",
-  "ช่องทางติดต่อ",
-  "หลักสูตร",
-  "ภาค",
-  "สถานะติดตาม",
-  "ผู้ดูแล",
-  "บันทึกล่าสุด",
-] as const;
+import { LeadsView } from "./leads-view";
 
 export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const filters = parseFilters(await searchParams);
@@ -64,81 +52,12 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
 
       <LeadFilters faculties={faculties} staff={staff} />
 
-      {result.items.length === 0 ? (
-        <div className="rounded-md border border-dashed p-10 text-center">
-          <p className="font-medium">ไม่พบผู้สนใจที่ตรงกับเงื่อนไข</p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            ลองล้างตัวกรอง หรือพิมพ์คำค้นให้สั้นลง
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead>
-              <tr className="border-b">
-                {HEADERS.map((label) => (
-                  <th
-                    key={label}
-                    className="text-muted-foreground px-3 py-1.5 text-left text-xs font-normal whitespace-nowrap"
-                  >
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody data-testid="lead-rows">
-              {result.items.map((person) => (
-                <tr key={person.id} className="border-b last:border-b-0">
-                  <td className="px-3 py-1.5 font-medium whitespace-nowrap">
-                    <Link
-                      href={`/leads/${person.id}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {person.fullName}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap tabular-nums">
-                    {person.phone ? (
-                      <a
-                        href={`tel:${person.phone}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {formatPhone(person.phone)}
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {person.facebookName ?? "—"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-1.5">
-                    {person.programName ??
-                      person.facultyName ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
-                    {person.studyMode ?? (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
-                    <Badge variant="secondary">{person.followUpStatus}</Badge>
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
-                    {person.ownerName ?? (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="text-muted-foreground px-3 py-1.5 whitespace-nowrap">
-                    {formatThaiDate(person.updatedAt)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <LeadsView
+        items={result.items}
+        staff={staff}
+        currentStatus={filters.status ?? ""}
+      />
+
 
       {result.pageCount > 1 ? (
         <nav className="mt-4 flex items-center gap-2" aria-label="แบ่งหน้า">

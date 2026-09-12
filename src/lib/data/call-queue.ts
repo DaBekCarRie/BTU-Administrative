@@ -11,6 +11,7 @@ export type QueueItem = {
   phone: string | null;
   facebookName: string | null;
   programName: string | null;
+  facultyName: string | null;
   studyMode: string | null;
   ownerName: string | null;
   nextCallAt: string;
@@ -21,7 +22,7 @@ export type QueueItem = {
 
 const COLUMNS = `id, full_name, phone, facebook_name, study_mode, next_call_at,
    call_count, last_call_outcome, last_call_note,
-   programs ( name ), staff ( display_name )`;
+   programs ( name, faculties ( name ) ), staff ( display_name )`;
 
 /**
  * แถวจาก view มา nullable ทุกช่อง เพราะ Postgres ไม่รับประกัน nullability ของ view
@@ -42,7 +43,7 @@ type QueueRow = Pick<
   | "last_call_outcome"
   | "last_call_note"
 > & {
-  programs: { name: string } | null;
+  programs: { name: string; faculties: { name: string } | null } | null;
   staff: { display_name: string } | null;
 };
 
@@ -53,6 +54,7 @@ function toItem(row: QueueRow): QueueItem {
     phone: row.phone,
     facebookName: row.facebook_name,
     programName: row.programs?.name ?? null,
+    facultyName: row.programs?.faculties?.name ?? null,
     studyMode: row.study_mode,
     ownerName: row.staff?.display_name ?? null,
     nextCallAt: row.next_call_at ?? "",

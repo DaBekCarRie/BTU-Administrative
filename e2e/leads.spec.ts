@@ -92,4 +92,68 @@ test.describe("เพิ่มผู้สนใจ", () => {
     await expect(page.getByTestId("lead-error")).toContainText("เบอร์โทรไม่ถูกต้อง");
     await expect(page).toHaveURL(/\/leads\/new/);
   });
+
+  test("การเลือกพร้อมกันหลายรายการ (Bulk Selection) แถบ Floating Action Bar และการเปิดแฟ้ม", async ({ page }) => {
+    await page.goto("/leads");
+    await expect(page.getByTestId("result-count")).toBeVisible();
+
+    // มีหัวตารางและการกระทำเปิดแฟ้ม
+    await expect(page.getByRole("columnheader", { name: "การกระทำ" })).toBeVisible();
+    const rows = page.getByTestId("lead-rows").locator("tr");
+    const count = await rows.count();
+    if (count > 0) {
+      // แถบ bulk action ยังไม่แสดงตอนแรก
+      await expect(page.getByTestId("bulk-action-bar")).not.toBeVisible();
+
+      // ติ๊กเลือกทั้งหมด
+      await page.getByTestId("select-all").click();
+      await expect(page.getByTestId("bulk-action-bar")).toBeVisible();
+      await expect(page.getByTestId("selected-count")).toContainText(`เลือกไว้ ${count} ราย`);
+      await expect(page.getByTestId("bulk-export-btn")).toBeVisible();
+      await expect(page.getByTestId("bulk-change-owner-btn")).toBeVisible();
+
+      // ยกเลิกการเลือก
+      await page.getByTestId("bulk-clear-btn").click();
+      await expect(page.getByTestId("bulk-action-bar")).not.toBeVisible();
+
+      // เลือกแถวแรก
+      const firstRowCheckbox = rows.first().locator('input[type="checkbox"]');
+      await firstRowCheckbox.click();
+      await expect(page.getByTestId("bulk-action-bar")).toBeVisible();
+      await expect(page.getByTestId("selected-count")).toContainText("เลือกไว้ 1 ราย");
+
+      // ปุ่มเปิดแฟ้มมีอยู่
+      const openBtn = rows.first().getByRole("link", { name: "เปิดแฟ้ม" });
+      await expect(openBtn).toBeVisible();
+
+      // เปลี่ยนผู้ดูแล
+      await page.getByTestId("bulk-change-owner-btn").click();
+      await expect(page.getByRole("heading", { name: "เปลี่ยนผู้ดูแล" })).toBeVisible();
+      await page.getByRole("button", { name: "ยกเลิก" }).click();
+      await expect(page.getByRole("heading", { name: "เปลี่ยนผู้ดูแล" })).not.toBeVisible();
+    }
+  });
+
+  test("มุมมองมือถือ: แสดงรายการการ์ดและแถบชิปสถานะติดตามแบบเลื่อนแนวนอน", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto("/leads");
+
+    // แถบชิปสถานะต้องมองเห็นบนมือถือ
+    const chips = page.getByTestId("mobile-status-chips");
+    await expect(chips).toBeVisible();
+    await expect(page.getByTestId("status-chip-ทั้งหมด")).toBeVisible();
+    await expect(page.getByTestId("status-chip-ใหม่")).toBeVisible();
+
+    // รายการการ์ดบนมือถือ
+    await expect(page.getByTestId("lead-mobile-cards")).toBeVisible();
+
+    // ลองกดชิป "ใหม่"
+    await page.getByTestId("status-chip-ใหม่").click();
+    await expect(page).toHaveURL(/status=/);
+
+    // กดชิป "ทั้งหมด" เพื่อรีเซ็ต
+    await page.getByTestId("status-chip-ทั้งหมด").click();
+    await expect(page).toHaveURL(/\/leads(\?page=1)?$/);
+  });
 });
+

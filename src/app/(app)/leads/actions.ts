@@ -243,3 +243,31 @@ export async function revealNationalId(
     };
   }
 }
+
+/** เปลี่ยนผู้ดูแลพร้อมกันหลายรายการ */
+export async function bulkChangeOwner(
+  personIds: string[],
+  newOwnerId: string,
+): Promise<{ ok?: boolean; error?: string }> {
+  if (!personIds.length) return { error: "ไม่มีรายการที่เลือก" };
+  if (!newOwnerId) return { error: "กรุณาเลือกผู้ดูแลใหม่" };
+
+  try {
+    for (const personId of personIds) {
+      await recordEvent(personId, {
+        type: "แก้ไขข้อมูล",
+        occurredAt: new Date().toISOString(),
+        payload: { ownerId: newOwnerId },
+      });
+    }
+
+    revalidatePath("/leads");
+    revalidatePath("/queue");
+    return { ok: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "เปลี่ยนผู้ดูแลไม่สำเร็จ",
+    };
+  }
+}
+
