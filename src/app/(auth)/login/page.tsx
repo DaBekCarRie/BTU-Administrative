@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   if (user) redirect("/queue");
 
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 p-6">
@@ -21,7 +21,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           ทีม LMS มหาวิทยาลัยกรุงเทพธนบุรี
         </p>
       </div>
-      <LoginForm next={typeof next === "string" ? next : undefined} />
+      <LoginForm
+        next={typeof next === "string" ? next : undefined}
+        urlError={typeof error === "string" ? error : undefined}
+      />
     </div>
   );
 }

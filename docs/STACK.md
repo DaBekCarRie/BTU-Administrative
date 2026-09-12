@@ -24,7 +24,7 @@
 | เข้าถึงข้อมูล | Supabase JS client เท่านั้น (ไม่มี ORM) | ดูหัวข้อ "ทำไมไม่ใช้ ORM" |
 | ค้นหา | pg_trgm + GIN index | Postgres ตัดคำไทยไม่ได้ trigram แก้ปัญหานี้ |
 | ไฟล์ | Supabase Storage (private) | ต้องการ signed URL + RLS ในระบบเดียวกัน |
-| Auth | Supabase Auth (email + password) | ทีมเล็ก ไม่ต้อง SSO |
+| Auth | Supabase Auth (email + password + Google OAuth) | อีเมลหลัก + เสริม Google OAuth เพื่อความสะดวกของเจ้าหน้าที่ โดยยังคุมสิทธิ์ผ่านตาราง staff |
 | Deploy | Vercel | preview deploy ต่อ branch ช่วยตรวจงานก่อนขึ้นจริง |
 | งานตามเวลา | Vercel Cron | อยู่ใน repo เดียวกัน debug ง่ายกว่า pg_cron |
 | แจ้งเตือน | LINE Messaging API (OA @btubkkthon) | ทีมอยู่ใน LINE ระบบต้องไปหาเขา |

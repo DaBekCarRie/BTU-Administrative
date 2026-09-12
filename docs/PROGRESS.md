@@ -8,9 +8,10 @@
 - **schema ทั้งหมดอยู่ในไฟล์ migration** 25 ไฟล์ ตรงกับ `schema_migrations` ในฐานข้อมูลจริง
   ชุด 20 ไฟล์แรกพิสูจน์ด้วยการเล่นใหม่บน PostgreSQL 17 เปล่า ๆ แล้ว hash เทียบกับของจริง — เหมือนกันทุก object
 - **รัน `/code-review` (mattpocock) แล้ว และซ่อมครบทุก finding ที่ยืนยันว่าจริง** (รายละเอียดด้านล่าง)
-- ด่านผ่านหมด: `typecheck` · unit 111 เทสต์ · e2e 69 เทสต์ (รวม RLS 14 ข้อ) · `lint` · `build` · `db:verify` ตรงทุกแถว
+- **เพิ่มระบบ Google OAuth** ปุ่มลงชื่อเข้าใช้ด้วย Google, callback route ตรวจสิทธิ์ staff ก่อนปล่อยเข้า พร้อม e2e test
+- ด่านผ่านหมด: `typecheck` · unit 111 เทสต์ · e2e 70 เทสต์ (รวม RLS 14 ข้อ) · `lint` · `build` · `db:verify` ตรงทุกแถว
 - Supabase security advisor เหลือแค่ 3 ฟังก์ชัน SECURITY DEFINER ที่ตั้งใจ (มี comment อธิบายในฐานข้อมูล)
-  กับ Leaked Password Protection ที่ต้องเปิดใน Dashboard เอง
+  กับ Leaked Password Protection ที่ติดข้อจำกัดของ Free tier (ต้องเป็น Pro plan ขึ้นไป — ปล่อยไว้ได้ ไม่กระทบการทำงาน)
 
 ## ซ่อมจาก code review แล้ว (ครบ)
 
@@ -59,11 +60,13 @@
 
 - **e2e รันกับโปรเจกต์จริงและทิ้งข้อมูลทดสอบไว้** ตอนนี้ `people` มี 3,244 แถว (จริง 3,177) ชื่อทดสอบขึ้นต้นด้วย prefix จาก `uniqueName()`
   ถ้าจะล้าง ให้เช็ค pattern กับข้อมูลจริงก่อนทุกครั้ง — เคยมี regex ไปโดนชื่อจริง "Weerapong Sa-arnwong" มาแล้ว
-- `npm run db:types` ยังใช้ไม่ได้จนกว่าจะ `supabase login` + `link` — ตอนนี้ generate ผ่าน MCP แล้ว format ด้วย prettier แทน
+- `npm run db:types` ใช้งานได้แล้ว (supabase CLI ลิงก์โปรเจกต์และ generate types สำเร็จแล้ว)
 
 ## ต้องทำเองในมือ
 
-- ตั้ง `SUPABASE_SERVICE_ROLE_KEY` ใน `.env.local` (ใช้เฉพาะ `scripts/`)
-- เปิด Leaked Password Protection ใน Supabase Dashboard → Authentication
-- สร้างบัญชีให้เจ้าหน้าที่ 5 คน แล้วผูก `staff.auth_user_id`
-- `npx supabase login` แล้ว `npx supabase link --project-ref encpmkhwxctcvcytfmuo` เพื่อให้ `npm run db:types` ใช้ได้
+- [ ] ตั้ง `SUPABASE_SERVICE_ROLE_KEY` ใน `.env.local` (ใช้เฉพาะ `scripts/`)
+- [ ] ตั้งค่า Google Cloud Console: สร้าง OAuth Client ID (Web application) ใส่ Authorized redirect URI: `https://encpmkhwxctcvcytfmuo.supabase.co/auth/v1/callback`
+- [ ] ใส่ Client ID / Secret ใน Supabase Dashboard → Authentication → Providers → Google
+- [x] Leaked Password Protection: Free plan ไม่รองรับ (เป็นฟีเจอร์ Pro) — ข้ามได้
+- [x] สร้างบัญชีให้เจ้าหน้าที่ 5 คน แล้วผูก `staff.auth_user_id` (สร้างและทดสอบล็อกอินครบทั้ง 5 คนแล้ว)
+- [x] `npx supabase link` เรียบร้อยแล้ว — `npm run db:types` ใช้งานได้สมบูรณ์

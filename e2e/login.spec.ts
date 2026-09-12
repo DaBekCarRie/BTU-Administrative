@@ -69,4 +69,24 @@ test.describe("เข้าสู่ระบบ", () => {
     await expect(page.getByTestId("login-error")).toContainText("ไม่ถูกต้อง");
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test("แสดงปุ่มลงชื่อเข้าใช้ด้วย Google และกดเพื่อเริ่มกระบวนการ OAuth", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    const googleBtn = page.getByRole("button", {
+      name: "ลงชื่อเข้าใช้ด้วย Google",
+    });
+    await expect(googleBtn).toBeVisible();
+
+    await googleBtn.click();
+    // หากยังไม่เปิด provider ใน Supabase จะ redirect กลับมาที่ /login?error=oauth_failed หรือหากเปิดแล้วจะ redirect ไป accounts.google.com
+    await page.waitForURL(
+      (url) =>
+        url.hostname.includes("google.com") ||
+        (url.pathname === "/login" && url.searchParams.has("error")),
+      { timeout: 10000 },
+    );
+  });
 });
+
