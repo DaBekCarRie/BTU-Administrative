@@ -335,8 +335,10 @@ async function main() {
 
   console.log("\n=== เริ่มเขียนข้อมูล ===");
   let written = 0;
+  let failed = 0;
   for (const person of prepared) {
     let state: PersonState | null = null;
+    let broke = false;
     // เรียงเหมือนที่ rebuildState ทำ: ติดต่อเข้ามาก่อน แล้วที่เหลือตามเวลา
     const [creation, ...rest] = person.events;
     const ordered = [
@@ -359,13 +361,19 @@ async function main() {
       });
       if (error) {
         console.error(`  แถว ${person.rowNumber} ${person.name}: ${error.message}`);
+        broke = true;
         break;
       }
     }
-    written += 1;
-    if (written % 200 === 0) console.log(`  เขียนแล้ว ${written}/${prepared.length}`);
+    // นับเฉพาะรายที่เขียนเหตุการณ์ครบ — รายที่พังกลางคันต้องไม่โผล่ในตัวเลข "สำเร็จ"
+    if (broke) failed += 1;
+    else written += 1;
+    if ((written + failed) % 200 === 0) {
+      console.log(`  เขียนแล้ว ${written + failed}/${prepared.length}`);
+    }
   }
-  console.log(`เขียนเสร็จ ${written} ราย`);
+  console.log(`เขียนเสร็จ ${written} ราย${failed ? ` · พัง ${failed} ราย (ดู error ด้านบน)` : ""}`);
+  if (failed) process.exitCode = 1;
 }
 
 main().catch((error) => {

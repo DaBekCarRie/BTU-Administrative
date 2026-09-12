@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 const NAV = [
   { href: "/queue", label: "คิวโทรวันนี้" },
   { href: "/leads", label: "ผู้สนใจ" },
-  { href: "/students", label: "ผู้เรียน" },
   { href: "/documents", label: "เอกสาร" },
   { href: "/exams", label: "ศูนย์สอบพิเศษ" },
   { href: "/faq", label: "คำถามที่พบบ่อย" },

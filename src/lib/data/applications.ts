@@ -10,6 +10,8 @@ export type PaymentRow = {
   paidAt: string;
   receiptNo: string | null;
   note: string | null;
+  /** path ใน storage ถ้าแนบสลิปไว้ (story 32) — เปิดผ่าน signed URL เท่านั้น */
+  slipPath: string | null;
 };
 
 export type ApplicationRow = {
@@ -35,7 +37,7 @@ export async function listApplications(
     .select(
       `id, academic_year, term, student_code, status, study_mode,
        faculties ( name ), programs ( name ),
-       payments ( id, amount, paid_at, receipt_no, note )`,
+       payments ( id, amount, paid_at, receipt_no, note, slip_path )`,
     )
     .eq("person_id", personId)
     .order("academic_year", { ascending: false });
@@ -49,6 +51,7 @@ export async function listApplications(
       paidAt: payment.paid_at,
       receiptNo: payment.receipt_no,
       note: payment.note,
+      slipPath: payment.slip_path,
     }));
 
     return {

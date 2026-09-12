@@ -21,13 +21,59 @@ import { toDateInputValue } from "@/lib/date";
 import { Constants } from "@/types/database";
 import {
   createApplication,
+  openSlip,
   recordPayment,
   saveStudentCode,
 } from "./application-actions";
 import { thaiYearNow } from "@/lib/date";
+import imageCompression from "browser-image-compression";
+import { createClient } from "@/lib/supabase/client";
 
 const selectClass =
   "border-input bg-background h-9 rounded-md border px-2 text-sm";
+
+/** ย่อรูปสลิปแบบเดียวกับเอกสารประจำตัว แล้วเก็บใต้โฟลเดอร์ของคนนั้น */
+async function uploadSlip(
+  personId: string,
+  file: File,
+): Promise<{ path: string } | { error: string }> {
+  const prepared = file.type.startsWith("image/")
+    ? await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1600, useWebWorker: true })
+    : file;
+  const extension = file.name.split(".").pop() ?? "bin";
+  const path = `${personId}/slip-${Date.now()}.${extension}`;
+
+  const { error } = await createClient()
+    .storage.from("documents")
+    .upload(path, prepared, { upsert: true });
+  if (error) return { error: `อัปโหลดสลิปไม่สำเร็จ: ${error.message}` };
+  return { path };
+}
+
+function SlipButton({ paymentId, personId }: { paymentId: string; personId: string }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      disabled={pending}
+      data-testid={`slip-${paymentId}`}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await openSlip(paymentId, personId);
+          if (result.error || !result.url) {
+            toast.error(result.error ?? "เปิดสลิปไม่สำเร็จ");
+            return;
+          }
+          window.open(result.url, "_blank", "noopener");
+        })
+      }
+    >
+      เปิดสลิป
+    </Button>
+  );
+}
 
 const baht = new Intl.NumberFormat("th-TH", {
   style: "currency",
@@ -190,6 +236,18 @@ function PaymentDialog({
           action={(formData) => {
             setError(null);
             startTransition(async () => {
+              // อัปโหลดสลิปจากเบราว์เซอร์ก่อน แล้วส่งแค่ path ไปให้ server action
+              const slip = formData.get("slipFile");
+              formData.delete("slipFile");
+              if (slip instanceof File && slip.size > 0) {
+                const uploaded = await uploadSlip(personId, slip);
+                if ("error" in uploaded) {
+                  setError(uploaded.error);
+                  return;
+                }
+                formData.set("slipPath", uploaded.path);
+              }
+
               const result = await recordPayment({}, formData);
               if (result.error) {
                 setError(result.error);
@@ -245,6 +303,20 @@ function PaymentDialog({
           <div className="flex flex-col gap-2">
             <Label htmlFor="receiptNo">เลขที่ใบเสร็จ</Label>
             <Input id="receiptNo" name="receiptNo" placeholder="เช่น RV:69-19030" />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="slipFile">สลิป (รูปหรือ PDF)</Label>
+            <Input
+              id="slipFile"
+              name="slipFile"
+              type="file"
+              accept="image/*,application/pdf"
+              data-testid="slip-file"
+            />
+            <p className="text-muted-foreground text-xs">
+              รูปจะถูกย่อขนาดอัตโนมัติ · แนบไว้ตรงนี้จะหาเจอจากไทม์ไลน์ทีหลัง
+            </p>
           </div>
 
           {error ? (
@@ -371,9 +443,14 @@ export function ApplicationsPanel({
               {application.payments.length > 0 ? (
                 <ul className="text-muted-foreground mt-3 flex flex-col gap-1 border-t pt-2 text-xs">
                   {application.payments.map((payment) => (
-                    <li key={payment.id} className="tabular-nums">
-                      {payment.paidAt} · {baht.format(payment.amount)}
-                      {payment.receiptNo ? ` · ${payment.receiptNo}` : ""}
+                    <li key={payment.id} className="flex items-center gap-2 tabular-nums">
+                      <span>
+                        {payment.paidAt} · {baht.format(payment.amount)}
+                        {payment.receiptNo ? ` · ${payment.receiptNo}` : ""}
+                      </span>
+                      {payment.slipPath ? (
+                        <SlipButton paymentId={payment.id} personId={personId} />
+                      ) : null}
                     </li>
                   ))}
                 </ul>

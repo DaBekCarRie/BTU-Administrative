@@ -9,6 +9,7 @@ import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
 import { text } from "@/lib/form";
+import { createSignedUrl } from "@/lib/data/documents";
 
 export type AppFormState = { error?: string; ok?: boolean };
 
@@ -74,6 +75,12 @@ export async function recordPayment(
     return { error: "จำนวนเงินต้องมากกว่า 0" };
   }
   if (!paidAt) return { error: "ต้องระบุวันที่ชำระ" };
+
+  // path ของสลิปต้องอยู่ใต้โฟลเดอร์ของคนนี้เท่านั้น กันชี้ไปไฟล์ของคนอื่น
+  const slipPath = text(formData, "slipPath");
+  if (slipPath && !slipPath.startsWith(`${personId}/`)) {
+    return { error: "ตำแหน่งไฟล์สลิปไม่ถูกต้อง" };
+  }
   if (
     !(Constants.public.Enums.payment_status as readonly string[]).includes(
       rawStatus ?? "",
@@ -91,6 +98,7 @@ export async function recordPayment(
     paid_at: paidAt,
     receipt_no: text(formData, "receiptNo"),
     note: text(formData, "note"),
+    slip_path: slipPath,
     recorded_by: staffId,
   });
   if (error) return { error: `บันทึกการชำระไม่สำเร็จ: ${error.message}` };
@@ -102,6 +110,7 @@ export async function recordPayment(
       applicationId,
       amount,
       paymentStatus: rawStatus as PaymentStatus,
+      slipPath,
     },
   });
 
@@ -227,4 +236,30 @@ export async function confirmStatus(
 
   revalidatePath(`/leads/${personId}`);
   return { ok: true };
+}
+
+/**
+ * ลิงก์เปิดสลิป — ตรวจก่อนว่าสลิปนี้เป็นของการสมัครของคนนี้จริง
+ * สลิปไม่ใช่เอกสารอ่อนไหว จึงไม่เขียน document_access_log
+ */
+export async function openSlip(
+  paymentId: string,
+  personId: string,
+): Promise<{ url?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("slip_path, applications!inner ( person_id )")
+    .eq("id", paymentId)
+    .eq("applications.person_id", personId)
+    .maybeSingle();
+
+  if (error) return { error: `อ่านสลิปไม่สำเร็จ: ${error.message}` };
+  if (!data?.slip_path) return { error: "ไม่พบสลิป" };
+
+  try {
+    return { url: await createSignedUrl(data.slip_path) };
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : "เปิดสลิปไม่สำเร็จ" };
+  }
 }

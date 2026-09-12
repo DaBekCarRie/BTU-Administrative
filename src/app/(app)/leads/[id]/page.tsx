@@ -10,7 +10,11 @@ import { getChecklist } from "@/lib/data/documents";
 import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
-import { isClosed, type StatusDimension } from "@/lib/domain/events";
+import {
+  isClosed,
+  type PersonDetails,
+  type StatusDimension,
+} from "@/lib/domain/events";
 import type { Enums } from "@/types/database";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
@@ -52,6 +56,21 @@ function CopiedStatus({
   );
 }
 
+/** ชื่อช่องสำหรับบอกว่า แก้ไขข้อมูล แก้อะไร (story 58) */
+const DETAIL_LABELS: Record<keyof PersonDetails, string> = {
+  fullName: "ชื่อ",
+  nickname: "ชื่อเล่น",
+  phone: "เบอร์โทร",
+  lineId: "LINE",
+  facebookName: "ชื่อ Facebook",
+  studyMode: "ภาค",
+  facultyId: "คณะ",
+  programId: "สาขา",
+  priorEducation: "วุฒิเดิม",
+  ownerId: "ผู้ดูแล",
+  note: "บันทึก",
+};
+
 /**
  * คำอธิบายย่อของแต่ละเหตุการณ์บนไทม์ไลน์
  * switch ต้องครบทุกชนิดใน enum — เพิ่ม event ใหม่แล้วลืมเขียนคำอธิบาย
@@ -66,7 +85,13 @@ function describe(
     case "ยื่นสมัคร":
       return `ปีการศึกษา ${payload.academicYear}`;
     case "ชำระเงิน":
-      return `${Number(payload.amount).toLocaleString("th-TH")} บาท · ${payload.paymentStatus}`;
+      return [
+        `${Number(payload.amount).toLocaleString("th-TH")} บาท`,
+        payload.paymentStatus,
+        payload.slipPath ? "มีสลิป" : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
     case "ได้รหัสนักศึกษา":
       return `รหัส ${payload.studentCode}`;
     case "ดรอป":
@@ -87,8 +112,12 @@ function describe(
       return [payload.outcome, note].filter(Boolean).join(" · ");
     case "ปิดเคส":
       return [`เหตุผล: ${payload.reason}`, note].filter(Boolean).join(" · ");
-    case "แก้ไขข้อมูล":
-      return `แก้ ${Object.keys(payload).length} ช่อง`;
+    case "แก้ไขข้อมูล": {
+      const changed = Object.keys(payload)
+        .map((key) => DETAIL_LABELS[key as keyof PersonDetails])
+        .filter(Boolean);
+      return changed.length ? `แก้ ${changed.join(" · ")}` : "แก้ข้อมูล";
+    }
     case "ติดต่อเข้ามา":
       return payload.source ? `ทาง ${payload.source}` : "";
     case "ส่งเอกสาร":

@@ -230,7 +230,7 @@ btu-admin/
     │   ├── (auth)/login/
     │   ├── (app)/queue/         ← คิวโทรวันนี้
     │   ├── (app)/leads/[id]/
-    │   ├── (app)/students/
+    │   ├── (app)/exams/         ← ศูนย์สอบพิเศษ
     │   ├── (app)/documents/
     │   ├── (app)/faq/
     │   └── api/cron/daily-digest/

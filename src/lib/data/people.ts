@@ -5,6 +5,7 @@ import {
   isBackdated,
   rebuildState,
   type DomainEvent,
+  type PersonDetails,
   type PersonState,
 } from "@/lib/domain/events";
 import { toDomainEvent } from "@/lib/domain/from-db";
@@ -37,6 +38,29 @@ function toState(row: PeopleRow): PersonState {
     creditBalance: Number(row.credit_balance ?? 0),
     firstContactedAt: row.first_contacted_at,
     lastEventAt: row.last_event_at,
+  };
+}
+
+/** ข้อมูลติดต่อปัจจุบัน สำหรับเทียบว่าฟอร์มแก้ไขเปลี่ยนช่องไหนบ้าง */
+export async function getPersonDetails(
+  personId: string,
+): Promise<PersonDetails | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("people")
+    .select("*")
+    .eq("id", personId)
+    .maybeSingle();
+  if (error) throw new Error(`อ่านข้อมูลคนไม่สำเร็จ: ${error.message}`);
+  if (!data) return null;
+
+  const {
+    fullName, nickname, phone, lineId, facebookName,
+    studyMode, facultyId, programId, priorEducation, ownerId, note,
+  } = toState(data);
+  return {
+    fullName, nickname, phone, lineId, facebookName,
+    studyMode, facultyId, programId, priorEducation, ownerId, note,
   };
 }
 

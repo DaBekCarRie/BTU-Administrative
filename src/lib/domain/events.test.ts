@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyEvent,
+  diffDetails,
   isBackdated,
   rebuildState,
   sortEvents,
@@ -626,3 +627,61 @@ describe("isBackdated — ตัวตัดสินว่าต้องเล
     ).toBe(true);
   });
 });
+
+describe("ส่งเอกสาร / ตรวจเอกสาร — โผล่บนไทม์ไลน์ แต่ไม่แตะสถานะ", () => {
+  const base = applyEvent(null, contacted);
+  const uploaded: DomainEvent = {
+    type: "ส่งเอกสาร",
+    occurredAt: "2026-09-08T03:00:00.000Z",
+    sequence: 2,
+    payload: { docType: "สำเนาบัตรประชาชน" },
+  };
+  const reviewed: DomainEvent = {
+    type: "ตรวจเอกสาร",
+    occurredAt: "2026-09-09T03:00:00.000Z",
+    sequence: 3,
+    payload: { docType: "สำเนาบัตรประชาชน", status: "ไม่ผ่าน", rejectReason: "ภาพเบลอ" },
+  };
+
+  it("ไม่เปลี่ยนสถานะทั้งสามมิติ", () => {
+    const after = applyEvent(applyEvent(base, uploaded), reviewed);
+
+    expect(after.followUpStatus).toBe(base.followUpStatus);
+    expect(after.enrollmentStatus).toBe(base.enrollmentStatus);
+    expect(after.paymentStatus).toBe(base.paymentStatus);
+  });
+
+  it("เลื่อนเวลาเหตุการณ์ล่าสุด เพื่อให้คนนี้ไม่ถูกนับว่าค้าง", () => {
+    expect(applyEvent(base, uploaded).lastEventAt).toBe(uploaded.occurredAt);
+  });
+
+  it("บันทึกเอกสารของคนที่ยังไม่มี ติดต่อเข้ามา ไม่ได้", () => {
+    expect(() => applyEvent(null, uploaded)).toThrow("ติดต่อเข้ามา");
+  });
+
+  it("เล่นใหม่ทั้งเส้นแล้วได้ผลเดียวกับพับทีละเหตุการณ์", () => {
+    const events = [contacted, uploaded, reviewed];
+    const incremental = events.reduce<PersonState | null>(
+      (state, event) => applyEvent(state, event),
+      null,
+    );
+    expect(rebuildState(events)).toEqual(incremental);
+  });
+});
+
+describe("diffDetails — payload ของ แก้ไขข้อมูล ต้องมีเฉพาะช่องที่เปลี่ยน", () => {
+  it("แก้ช่องเดียวได้ key เดียว", () => {
+    expect(diffDetails(details, { ...details, nickname: "ฤดี" })).toEqual({
+      nickname: "ฤดี",
+    });
+  });
+
+  it("ไม่แก้อะไรเลยได้ object ว่าง — ผู้เรียกจะได้ไม่บันทึกเหตุการณ์เปล่า", () => {
+    expect(diffDetails(details, { ...details })).toEqual({});
+  });
+
+  it("ล้างค่าเป็น null ก็นับว่าเปลี่ยน", () => {
+    expect(diffDetails(details, { ...details, phone: null })).toEqual({ phone: null });
+  });
+});
+

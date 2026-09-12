@@ -1,6 +1,9 @@
+import { Constants } from "../../types/database";
+
 import {
   CALL_OUTCOMES,
   type CallOutcome,
+  type DocType,
   type DomainEvent,
   type PaymentStatus,
   type PersonDetails,
@@ -19,6 +22,12 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
+}
+
+function docTypeOf(value: unknown): DocType | null {
+  return (Constants.public.Enums.doc_type as readonly string[]).includes(String(value))
+    ? (value as DocType)
+    : null;
 }
 
 function details(payload: Record<string, unknown>): PersonDetails {
@@ -125,6 +134,7 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
           applicationId,
           amount: Number(payload.amount) || 0,
           paymentStatus: status as PaymentStatus,
+          slipPath: str(payload.slipPath),
         },
       };
     }
@@ -234,6 +244,29 @@ export function toDomainEvent(row: RawEvent): DomainEvent | null {
           mergedId,
           keep: details(asRecord(payload.keep)),
         },
+      };
+    }
+
+    case "ส่งเอกสาร": {
+      const docType = docTypeOf(payload.docType);
+      if (!docType) return null;
+      return {
+        type: "ส่งเอกสาร",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { docType },
+      };
+    }
+
+    case "ตรวจเอกสาร": {
+      const docType = docTypeOf(payload.docType);
+      const status = payload.status;
+      if (!docType || (status !== "ผ่าน" && status !== "ไม่ผ่าน")) return null;
+      return {
+        type: "ตรวจเอกสาร",
+        occurredAt: row.occurred_at,
+        sequence: row.id,
+        payload: { docType, status, rejectReason: str(payload.rejectReason) },
       };
     }
 

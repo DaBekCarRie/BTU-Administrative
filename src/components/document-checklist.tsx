@@ -101,12 +101,8 @@ export function DocumentChecklistPanel({
 
   function open(item: DocumentChecklist["items"][number]) {
     startTransition(async () => {
-      const result = await openDocument(
-        item.id,
-        personId,
-        item.storagePath,
-        item.isSensitive,
-      );
+      // ฝั่งเซิร์ฟเวอร์ตัดสินเองว่าอ่อนไหวไหมและ path อะไร — ไม่รับจากตรงนี้
+      const result = await openDocument(item.id, personId);
       if (result.error || !result.url) {
         toast.error(result.error ?? "เปิดเอกสารไม่สำเร็จ");
         return;

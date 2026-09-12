@@ -55,11 +55,15 @@ test.describe("การสมัคร ชำระเงิน รหัสน
     await dialog.getByLabel("จำนวนเงิน (บาท)").fill("3000");
     await dialog.getByLabel("สถานะการเงินที่ฝ่ายการเงินแจ้ง").selectOption("รักษาสภาพ");
     await dialog.getByLabel("เลขที่ใบเสร็จ").fill("RV:69-19030");
+    await page.getByTestId("slip-file").setInputFiles("e2e/fixtures/doc.png");
     await page.getByTestId("submit-payment").click();
     await expect(page.getByTestId("submit-payment")).toHaveCount(0);
 
     await expect(page.getByTestId("application-list")).toContainText("RV:69-19030");
     await expect(page.getByTestId("application-list")).toContainText("฿3,000");
+    // story 32: สลิปแนบอยู่กับงวดนั้น และ story 40: เห็นจากไทม์ไลน์
+    await expect(page.getByTestId(/^slip-/)).toBeVisible();
+    await expect(page.getByTestId("timeline")).toContainText("มีสลิป");
 
     // ADR-0003: สถานะที่เป็นสำเนาต้องมีวันที่ยืนยันติดเสมอ
     const statusPanel = page.getByTestId("status-panel");

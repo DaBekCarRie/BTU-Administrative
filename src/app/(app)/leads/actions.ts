@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import {
   findByPhone,
+  getPersonDetails,
   mergePeople,
   recordEvent,
   type DuplicateMatch,
@@ -13,6 +14,7 @@ import {
 import {
   CALL_OUTCOMES,
   CLOSE_REASONS,
+  diffDetails,
   type PersonDetails,
   type PriorEducation,
   type StudyMode,
@@ -98,11 +100,18 @@ export async function editLead(
   const details = readDetails(formData);
   if ("error" in details) return details;
 
-  await recordEvent(personId, {
-    type: "แก้ไขข้อมูล",
-    occurredAt: new Date().toISOString(),
-    payload: details,
-  });
+  const before = await getPersonDetails(personId);
+  if (!before) return { error: "ไม่พบคนที่จะแก้" };
+
+  // ส่งเฉพาะช่องที่เปลี่ยน ไทม์ไลน์จะได้บอกว่า "แก้อะไร" ไม่ใช่ "แก้ 11 ช่อง" ทุกครั้ง (story 58)
+  const patch = diffDetails(before, details);
+  if (Object.keys(patch).length > 0) {
+    await recordEvent(personId, {
+      type: "แก้ไขข้อมูล",
+      occurredAt: new Date().toISOString(),
+      payload: patch,
+    });
+  }
 
   revalidatePath("/leads");
   redirect("/leads");

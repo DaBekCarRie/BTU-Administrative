@@ -3,10 +3,13 @@
  *
  * ไฟล์นี้ต้องไม่ import อะไรที่แตะ I/O เลย (ไม่มี supabase ไม่มี fs ไม่มี fetch)
  * เพื่อให้ทดสอบได้โดยไม่ต้องมีฐานข้อมูล และให้ `สถานะปัจจุบัน` สร้างใหม่ได้เสมอ
+ * `import type` จาก @/types/database ไม่นับ — ถูกลบทิ้งตอนคอมไพล์ ไม่มีโค้ดวิ่งจริง
  *
  * การเพิ่มชนิดเหตุการณ์: เพิ่มสมาชิกใน DomainEvent แล้ว TypeScript จะบังคับให้
  * เขียน handler ใน applyEvent เอง — ลืมไม่ได้
  */
+
+import type { Enums } from "@/types/database";
 
 export type FollowUpStatus =
   | "ใหม่"
@@ -94,6 +97,10 @@ export const CALL_OUTCOMES = [
 ] as const;
 export type CallOutcome = (typeof CALL_OUTCOMES)[number];
 
+export type DocType = Enums<"doc_type">;
+/** ผลตรวจที่บันทึกได้ — "ส่งแล้ว" เป็นสถานะตั้งต้นตอนอัปโหลด ไม่ใช่ผลตรวจ */
+export type DocReviewStatus = Exclude<Enums<"doc_status">, "ส่งแล้ว">;
+
 export const CLOSE_REASONS = ["ไม่สนใจ", "ติดต่อไม่ได้"] as const;
 export type CloseReason = (typeof CLOSE_REASONS)[number];
 
@@ -138,6 +145,8 @@ export type DomainEvent =
          * ระบบคำนวณเองไม่ได้เพราะไม่รู้ยอดค่าเทอมที่แท้จริงของแต่ละหลักสูตร
          */
         paymentStatus: PaymentStatus;
+        /** path ของสลิปใน storage — story 40 หาเอกสารเจอจากไทม์ไลน์ */
+        slipPath?: string | null;
       };
     })
   | (EventBase & {
@@ -171,6 +180,18 @@ export type DomainEvent =
   | (EventBase & {
       type: "ถอนคำขอศูนย์สอบ";
       payload: { requestId: string; centerName: string };
+    })
+  | (EventBase & {
+      type: "ส่งเอกสาร";
+      payload: { docType: DocType };
+    })
+  | (EventBase & {
+      type: "ตรวจเอกสาร";
+      payload: {
+        docType: DocType;
+        status: DocReviewStatus;
+        rejectReason?: string | null;
+      };
     })
   | (EventBase & {
       type: "รวมข้อมูล";
@@ -215,6 +236,24 @@ export function isClosed(status: FollowUpStatus): boolean {
 }
 
 export type DomainEventType = DomainEvent["type"];
+
+/**
+ * เฉพาะช่องที่เปลี่ยนจริง — payload ของ `แก้ไขข้อมูล` ต้องบอกได้ว่า "แก้อะไร" (story 58)
+ * ถ้าส่งทุกช่องเสมอ ไทม์ไลน์จะขึ้น "แก้ 11 ช่อง" ทุกครั้งแม้แก้แค่ชื่อเล่น
+ */
+export function diffDetails(
+  before: PersonDetails,
+  after: PersonDetails,
+): Partial<PersonDetails> {
+  const patch: Partial<PersonDetails> = {};
+  for (const key of Object.keys(after) as (keyof PersonDetails)[]) {
+    if (before[key] !== after[key]) {
+      // ชนิดของแต่ละช่องต่างกัน แต่ key เดียวกันทั้งสองฝั่ง ปลอดภัยที่จะ assign ข้าม
+      (patch as Record<string, unknown>)[key] = after[key];
+    }
+  }
+  return patch;
+}
 
 function applyDetails(
   base: PersonDetails,
@@ -434,6 +473,14 @@ export function applyEvent(
     case "ถอนคำขอศูนย์สอบ": {
       if (!state) throw new Error("คำขอศูนย์สอบของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
       // ไม่กระทบสถานะทั้งสามมิติ เป็นเรื่องการสอบล้วน ๆ
+      return { ...state, lastEventAt: later(state.lastEventAt, event.occurredAt) };
+    }
+
+    case "ส่งเอกสาร":
+    case "ตรวจเอกสาร": {
+      if (!state) throw new Error("บันทึกเอกสารของคนที่ยังไม่มีเหตุการณ์ `ติดต่อเข้ามา` ไม่ได้");
+      // ตัวเอกสารอยู่ในตาราง documents — เหตุการณ์นี้มีไว้ให้โผล่บนไทม์ไลน์ (story 40)
+      // ไม่กระทบสถานะทั้งสามมิติ
       return { ...state, lastEventAt: later(state.lastEventAt, event.occurredAt) };
     }
 
