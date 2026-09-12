@@ -5,13 +5,9 @@ import { revalidatePath } from "next/cache";
 
 import { recordEvent } from "@/lib/data/people";
 import { createClient } from "@/lib/supabase/server";
+import { text } from "@/lib/form";
 
 export type ExamFormState = { error?: string; ok?: boolean };
-
-function text(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
 
 export async function requestExamCenter(
   _prev: ExamFormState,

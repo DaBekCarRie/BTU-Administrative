@@ -24,6 +24,7 @@ import {
   recordPayment,
   saveStudentCode,
 } from "./application-actions";
+import { thaiYearNow } from "@/lib/date";
 
 const selectClass =
   "border-input bg-background h-9 rounded-md border px-2 text-sm";
@@ -48,7 +49,7 @@ function AddApplicationDialog({
   const [pending, startTransition] = useTransition();
 
   const programs = faculties.find((f) => f.id === facultyId)?.programs ?? [];
-  const thisYear = new Date().getFullYear() + 543;
+  const thisYear = thaiYearNow();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

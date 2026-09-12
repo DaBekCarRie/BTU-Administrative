@@ -6,6 +6,7 @@ import { getCallQueue, type QueueItem } from "@/lib/data/call-queue";
 import { getWorkBoard, THRESHOLDS } from "@/lib/data/work-board";
 import { daysOverdue, formatThaiDate } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
+import { DOC_TYPES } from "@/lib/documents-shared";
 
 function QueueTable({
   items,
@@ -178,7 +179,7 @@ export default async function QueuePage() {
           label="เอกสารไม่ครบ"
           value={board.incompleteDocuments}
           href="/documents"
-          hint={`ตรวจผ่านไม่ถึง ${4} ประเภท`}
+          hint={`ตรวจผ่านไม่ถึง ${DOC_TYPES.length} ประเภท`}
         />
         <WorkTile
           label="คิวโทรวันนี้"

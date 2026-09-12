@@ -21,17 +21,13 @@ import { readNationalId, setNationalId } from "@/lib/data/national-id";
 import { toDateInputValue } from "@/lib/date";
 import { normalizePhone } from "@/lib/phone";
 import { Constants } from "@/types/database";
+import { text } from "@/lib/form";
 
 export type LeadFormState = {
   error?: string;
   /** ต้องแยกจาก {} ให้ได้ ไม่งั้นหน้าจอแยกไม่ออกว่ายังไม่ส่ง หรือส่งสำเร็จแล้ว */
   ok?: boolean;
 };
-
-function text(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
 
 function optionOf<T extends string>(
   allowed: readonly T[],

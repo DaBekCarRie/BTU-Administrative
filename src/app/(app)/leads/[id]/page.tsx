@@ -10,7 +10,8 @@ import { getChecklist } from "@/lib/data/documents";
 import { listFacultiesWithPrograms } from "@/lib/data/master-data";
 import { getPersonDetail, listTimeline } from "@/lib/data/people";
 import { formatThaiDate, formatThaiDateTime, fromNowThai } from "@/lib/date";
-import type { StatusDimension } from "@/lib/domain/events";
+import { isClosed, type StatusDimension } from "@/lib/domain/events";
+import type { Enums } from "@/types/database";
 import { formatPhone } from "@/lib/phone";
 import { CloseLeadForm } from "./close-lead-form";
 import { MergeForm } from "./merge-form";
@@ -51,7 +52,15 @@ function CopiedStatus({
   );
 }
 
-function describe(type: string, payload: Record<string, unknown>): string {
+/**
+ * คำอธิบายย่อของแต่ละเหตุการณ์บนไทม์ไลน์
+ * switch ต้องครบทุกชนิดใน enum — เพิ่ม event ใหม่แล้วลืมเขียนคำอธิบาย
+ * จะพังตอน typecheck ไม่ใช่ตกลง default เงียบ ๆ แบบเดิม
+ */
+function describe(
+  type: Enums<"event_type">,
+  payload: Record<string, unknown>,
+): string {
   const note = typeof payload.note === "string" ? payload.note : "";
   switch (type) {
     case "ยื่นสมัคร":
@@ -82,8 +91,21 @@ function describe(type: string, payload: Record<string, unknown>): string {
       return `แก้ ${Object.keys(payload).length} ช่อง`;
     case "ติดต่อเข้ามา":
       return payload.source ? `ทาง ${payload.source}` : "";
-    default:
+    case "ส่งเอกสาร":
+      return String(payload.docType ?? "");
+    case "ตรวจเอกสาร":
+      return [payload.docType, payload.status, payload.rejectReason]
+        .filter(Boolean)
+        .join(" · ");
+    case "รวมข้อมูล":
+      return "รวมรายการซ้ำเข้ามา";
+    case "กลับมาเรียน":
+    case "ลาออก":
       return note;
+    default: {
+      const unreachable: never = type;
+      return unreachable;
+    }
   }
 }
 
@@ -278,9 +300,7 @@ export default async function PersonPage({ params }: PageProps<"/leads/[id]">) {
 
           <CloseLeadForm
             personId={person.id}
-            alreadyClosed={["ไม่สนใจ", "ติดต่อไม่ได้", "สมัครแล้ว"].includes(
-              person.follow_up_status,
-            )}
+            alreadyClosed={isClosed(person.follow_up_status)}
           />
         </aside>
       </div>

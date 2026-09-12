@@ -5,13 +5,9 @@ import { revalidatePath } from "next/cache";
 import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
+import { text } from "@/lib/form";
 
 export type AnswerFormState = { error?: string; ok?: boolean };
-
-function text(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
 
 export async function createAnswer(
   _prev: AnswerFormState,

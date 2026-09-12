@@ -10,7 +10,7 @@ import {
 import { toDomainEvent } from "@/lib/domain/from-db";
 import { normalizePhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 
 type PeopleRow = Tables<"people">;
 
@@ -292,7 +292,8 @@ export async function getPersonForEdit(id: string) {
 
 export type TimelineEntry = {
   id: number;
-  type: string;
+  /** ชนิดจาก enum ตรง ๆ ไม่ขยายเป็น string — ให้หน้าจอ switch ครบทุกชนิดได้ */
+  type: Enums<"event_type">;
   occurredAt: string;
   recordedAt: string;
   recordedBy: string | null;

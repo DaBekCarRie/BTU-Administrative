@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import type { ExamRequest } from "@/lib/data/exams";
 import { KNOWN_CENTERS } from "@/lib/exams-shared";
 import { requestExamCenter, withdrawExamRequest } from "@/app/(app)/exams/actions";
+import { thaiYearNow } from "@/lib/date";
 
 export function ExamPanel({
   personId,
@@ -22,7 +23,7 @@ export function ExamPanel({
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [pending, startTransition] = useTransition();
-  const thisYear = new Date().getFullYear() + 543;
+  const thisYear = thaiYearNow();
 
   return (
     <div className="rounded-md border p-4">

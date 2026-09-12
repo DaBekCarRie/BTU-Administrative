@@ -54,3 +54,18 @@ export { dayjs };
 export function toDateInputValue(offsetDays = 0): string {
   return dayjs().tz(TZ).add(offsetDays, "day").format("YYYY-MM-DD");
 }
+
+/** ปี พ.ศ. ปัจจุบันตามเวลาไทย — ค่าเริ่มต้นของช่องปีการศึกษา */
+export function thaiYearNow(): number {
+  return Number(dayjs().tz(TZ).format("BBBB"));
+}
+
+/** ต้นวันนี้ตามเวลาไทย ในรูป ISO (UTC) สำหรับส่งเข้า query */
+export function startOfTodayBangkok(): string {
+  return dayjs().tz(TZ).startOf("day").toISOString();
+}
+
+/** สิ้นวันนี้ตามเวลาไทย ในรูป ISO (UTC) สำหรับส่งเข้า query */
+export function endOfTodayBangkok(): string {
+  return dayjs().tz(TZ).endOf("day").toISOString();
+}

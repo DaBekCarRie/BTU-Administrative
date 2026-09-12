@@ -8,13 +8,9 @@ import type { PaymentStatus, StudyMode } from "@/lib/domain/events";
 import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
+import { text } from "@/lib/form";
 
 export type AppFormState = { error?: string; ok?: boolean };
-
-function text(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
 
 /** ยื่นสมัคร = สร้างการสมัครหนึ่งรายการ + เหตุการณ์ `ยื่นสมัคร` */
 export async function createApplication(

@@ -6,6 +6,15 @@
  *   ช่อง "วันที่ให้โทร" 1,486 จาก 1,530 แถวไม่ใช่วันที่ แต่เป็นสถานะ
  */
 
+import type {
+  CallOutcome,
+  FollowUpStatus,
+  PriorEducation,
+  StudyMode,
+} from "../domain/events";
+
+export type { CallOutcome, FollowUpStatus, PriorEducation, StudyMode };
+
 /**
  * ลบวรรณยุกต์และสระที่พิมพ์ซ้ำติดกัน
  * ต้นเหตุของ ฝ้าย / ฝ้้าย / ฝ้้้าย / ฝ้้้้าย ที่มองด้วยตาไม่เห็นความต่าง
@@ -130,13 +139,6 @@ export function normalizeProgram(input: string | null): string | null {
   return PROGRAM_ALIASES[cleaned] ?? null;
 }
 
-export type PriorEducation =
-  | "ม.6"
-  | "กศน.เทียบเท่า ม.6"
-  | "ปวช."
-  | "ปวส."
-  | "ปริญญาตรี"
-  | "อื่นๆ";
 
 export function normalizePriorEducation(
   input: string | null,
@@ -153,7 +155,6 @@ export function normalizePriorEducation(
   return "อื่นๆ";
 }
 
-export type StudyMode = "ปกติ" | "สมทบ" | "ทางไกล";
 
 /** ชีทเดิมใช้สามคอลัมน์ติ๊ก ไม่ใช่ช่องเดียว */
 export function normalizeStudyMode(
@@ -167,14 +168,6 @@ export function normalizeStudyMode(
   return null;
 }
 
-export type FollowUpStatus =
-  | "ใหม่"
-  | "กำลังติดตาม"
-  | "นัดโทรแล้ว"
-  | "สนใจสมัคร"
-  | "สมัครแล้ว"
-  | "ไม่สนใจ"
-  | "ติดต่อไม่ได้";
 
 export type CallDateField =
   | { kind: "date"; value: string }
@@ -249,13 +242,6 @@ export function parseThaiDate(input: string | null): string | null {
   return null;
 }
 
-export type CallOutcome =
-  | "ไม่รับสาย"
-  | "คุยแล้วสนใจ"
-  | "คุยแล้วไม่สนใจ"
-  | "ขอคิดดูก่อน"
-  | "นัดโทรใหม่"
-  | "สมัครแล้ว";
 
 /**
  * ช่องติดตามในชีทเดิมเป็นข้อความก้อนเดียว เช่น

@@ -6,13 +6,9 @@ import { createSignedUrl } from "@/lib/data/documents";
 import { currentStaffId } from "@/lib/data/staff";
 import { createClient } from "@/lib/supabase/server";
 import { Constants, type Enums } from "@/types/database";
+import { text } from "@/lib/form";
 
 export type DocFormState = { error?: string; ok?: boolean };
-
-function text(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
 
 /** บันทึกว่าอัปโหลดไฟล์ขึ้น storage แล้ว — ตัวไฟล์ถูกส่งจากเบราว์เซอร์หลังย่อขนาด */
 export async function recordUpload(
