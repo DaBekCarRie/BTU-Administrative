@@ -763,28 +763,32 @@ export type Database = {
         Args: { p_national_id: string; p_person_id: string };
         Returns: undefined;
       };
+      work_board_counts: {
+        Args: {
+          p_awaiting_days: number;
+          p_closed_statuses: Database["public"]["Enums"]["follow_up_status"][];
+          p_doc_types: number;
+          p_stale_days: number;
+        };
+        Returns: {
+          applied_this_month: number;
+          awaiting_student_code: number;
+          dropped: number;
+          enrolled: number;
+          incomplete_documents: number;
+          stale_leads: number;
+        }[];
+      };
     };
     Enums: {
       answer_visibility: "ตอบผู้สนใจได้" | "ใช้ภายในเท่านั้น";
       application_status:
-        | "ร่าง"
-        | "รอเอกสาร"
-        | "รอชำระเงิน"
-        | "รอตรวจสอบ"
-        | "อนุมัติ"
-        | "ยกเลิก";
+        "ร่าง" | "รอเอกสาร" | "รอชำระเงิน" | "รอตรวจสอบ" | "อนุมัติ" | "ยกเลิก";
       doc_status: "ส่งแล้ว" | "ผ่าน" | "ไม่ผ่าน";
       doc_type:
-        | "รูปถ่าย"
-        | "วุฒิการศึกษา"
-        | "สำเนาบัตรประชาชน"
-        | "สำเนาทะเบียนบ้าน";
+        "รูปถ่าย" | "วุฒิการศึกษา" | "สำเนาบัตรประชาชน" | "สำเนาทะเบียนบ้าน";
       enrollment_status:
-        | "ยังไม่เริ่ม"
-        | "เรียนอยู่"
-        | "ดรอป"
-        | "ลาออก"
-        | "จบแล้ว";
+        "ยังไม่เริ่ม" | "เรียนอยู่" | "ดรอป" | "ลาออก" | "จบแล้ว";
       event_type:
         | "ติดต่อเข้ามา"
         | "โทรตาม"
@@ -814,12 +818,7 @@ export type Database = {
         | "ติดต่อไม่ได้";
       payment_status: "ยังไม่ชำระ" | "ผ่อนอยู่" | "รักษาสภาพ" | "ชำระครบ";
       prior_education:
-        | "ม.6"
-        | "กศน.เทียบเท่า ม.6"
-        | "ปวช."
-        | "ปวส."
-        | "ปริญญาตรี"
-        | "อื่นๆ";
+        "ม.6" | "กศน.เทียบเท่า ม.6" | "ปวช." | "ปวส." | "ปริญญาตรี" | "อื่นๆ";
       study_mode: "ปกติ" | "สมทบ" | "ทางไกล";
     };
     CompositeTypes: Record<string, never>;
@@ -857,7 +856,13 @@ export const Constants = {
         "สำเนาบัตรประชาชน",
         "สำเนาทะเบียนบ้าน",
       ],
-      enrollment_status: ["ยังไม่เริ่ม", "เรียนอยู่", "ดรอป", "ลาออก", "จบแล้ว"],
+      enrollment_status: [
+        "ยังไม่เริ่ม",
+        "เรียนอยู่",
+        "ดรอป",
+        "ลาออก",
+        "จบแล้ว",
+      ],
       exam_request_status: ["ขอแล้ว", "ยืนยันแล้ว", "ถอนแล้ว"],
       follow_up_status: [
         "ใหม่",

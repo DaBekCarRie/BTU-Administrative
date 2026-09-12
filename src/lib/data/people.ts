@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   applyEvent,
+  isBackdated,
   rebuildState,
   type DomainEvent,
   type PersonState,
@@ -44,6 +45,9 @@ function toState(row: PeopleRow): PersonState {
  *
  * คำนวณสถานะใหม่ด้วยฟังก์ชันบริสุทธิ์ แล้วให้ฐานข้อมูลเขียน `events`
  * กับ `people` ในทรานแซกชันเดียว — ตาราง `people` มี trigger กันการเขียนตรง ๆ อยู่
+ *
+ * เหตุการณ์ที่บันทึกย้อนหลัง (occurredAt เก่ากว่าเหตุการณ์ล่าสุดที่มีอยู่) ต้องเล่นใหม่
+ * ทั้งเส้น ไม่ใช่พับทับสถานะปัจจุบัน ไม่งั้นผลของสายที่เก่ากว่าจะทับผลของสายที่ใหม่กว่า
  */
 export async function recordEvent(
   personId: string,
@@ -61,7 +65,10 @@ export async function recordEvent(
     throw new Error(`อ่านข้อมูลคนไม่สำเร็จ: ${readError.message}`);
   }
 
-  const nextState = applyEvent(existing ? toState(existing) : null, event);
+  const nextState =
+    existing && isBackdated(existing.last_event_at, event)
+      ? await replayWith(supabase, personId, event)
+      : applyEvent(existing ? toState(existing) : null, event);
 
   const { error } = await supabase.rpc("record_event", {
     p_person_id: personId,
@@ -76,6 +83,31 @@ export async function recordEvent(
   }
 
   return personId;
+}
+
+/** อ่านเหตุการณ์เดิมทั้งหมด แทรกเหตุการณ์ใหม่เข้าไป แล้วเล่นใหม่ทั้งเส้น */
+async function replayWith(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  personId: string,
+  event: DomainEvent,
+): Promise<PersonState> {
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, type, occurred_at, payload")
+    .eq("person_id", personId)
+    .order("occurred_at")
+    .order("id");
+  if (error) throw new Error(`อ่านเหตุการณ์ไม่สำเร็จ: ${error.message}`);
+
+  const events = (data ?? [])
+    .map(toDomainEvent)
+    .filter((existing): existing is DomainEvent => existing !== null);
+
+  // เหตุการณ์เดิมใช้ events.id เป็นลำดับ ตัวที่กำลังจะเขียนยังไม่มี id
+  // ให้เลขที่มากกว่าทุกตัว เพราะถ้าเวลาชนกันพอดี ตัวที่เพิ่งบันทึกต้องมาทีหลัง
+  const lastSequence = Math.max(0, ...events.map((e) => e.sequence ?? 0));
+
+  return rebuildState([...events, { ...event, sequence: lastSequence + 1 }]);
 }
 
 import {

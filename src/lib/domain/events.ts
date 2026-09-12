@@ -198,15 +198,20 @@ const OUTCOME_TO_STATUS: Record<CallOutcome, FollowUpStatus> = {
   สมัครแล้ว: "สมัครแล้ว",
 };
 
-/** สถานะที่ถือว่าจบแล้ว ไม่ต้องโผล่ในคิวโทรอีก */
-const CLOSED_STATUSES: ReadonlySet<FollowUpStatus> = new Set([
+/**
+ * สถานะที่ถือว่าจบแล้ว ไม่ต้องโผล่ในคิวโทรอีก
+ * แหล่งเดียวของรายการนี้ — คิวโทร กระดานงานค้าง และหน้ารายละเอียดต้องอ้างที่นี่
+ */
+export const CLOSED_STATUSES = [
   "ไม่สนใจ",
   "ติดต่อไม่ได้",
   "สมัครแล้ว",
-]);
+] as const satisfies readonly FollowUpStatus[];
+
+const CLOSED_LOOKUP: ReadonlySet<string> = new Set(CLOSED_STATUSES);
 
 export function isClosed(status: FollowUpStatus): boolean {
-  return CLOSED_STATUSES.has(status);
+  return CLOSED_LOOKUP.has(status);
 }
 
 export type DomainEventType = DomainEvent["type"];
@@ -454,6 +459,19 @@ export function applyEvent(
 }
 
 /** เรียงเหตุการณ์ตามเวลาที่เกิดจริง ถ้าเท่ากันใช้ลำดับที่ฐานข้อมูลออกให้ตัดสิน */
+/**
+ * เหตุการณ์นี้เกิดก่อนเหตุการณ์ล่าสุดที่บันทึกไว้แล้วหรือเปล่า
+ *
+ * ถ้าใช่ จะพับมันทับสถานะปัจจุบันเฉย ๆ ไม่ได้ ต้องเล่นใหม่ทั้งเส้น
+ * ไม่งั้นผลของสายที่เก่ากว่าจะไปทับผลของสายที่ใหม่กว่า
+ */
+export function isBackdated(
+  lastEventAt: string,
+  event: DomainEvent,
+): boolean {
+  return new Date(event.occurredAt).getTime() < new Date(lastEventAt).getTime();
+}
+
 export function sortEvents(events: readonly DomainEvent[]): DomainEvent[] {
   return [...events].sort((a, b) => {
     const byTime =

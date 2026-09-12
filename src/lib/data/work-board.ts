@@ -1,6 +1,7 @@
 import "server-only";
 
 import { DOC_TYPES } from "@/lib/documents-shared";
+import { CLOSED_STATUSES } from "@/lib/domain/events";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -14,8 +15,6 @@ export const THRESHOLDS = {
   awaitingStudentCodeDays: 3,
 } as const;
 
-const CLOSED = ["ไม่สนใจ", "ติดต่อไม่ได้", "สมัครแล้ว"] as const;
-
 export type WorkBoard = {
   staleLeads: number;
   awaitingStudentCode: number;
@@ -25,73 +24,30 @@ export type WorkBoard = {
   dropped: number;
 };
 
-function daysAgo(days: number): string {
-  return new Date(Date.now() - days * 86_400_000).toISOString();
-}
-
-/** ต้นเดือนนี้ตามเวลาไทย */
-function startOfMonthBangkok(): string {
-  const bangkok = new Date(Date.now() + 7 * 3_600_000);
-  const start = Date.UTC(bangkok.getUTCFullYear(), bangkok.getUTCMonth(), 1);
-  return new Date(start - 7 * 3_600_000).toISOString();
-}
-
+/**
+ * ตัวเลขทั้งหมดนับในฐานข้อมูล ไม่ดึงแถวมานับเอง
+ * ของเดิมดึงใบสมัครมานับใน JS แล้ว .limit(1000) ตัดเงียบ ๆ และนับใบแทนที่จะนับคน
+ */
 export async function getWorkBoard(): Promise<WorkBoard> {
   const supabase = await createClient();
 
-  const notClosed = `(${CLOSED.join(",")})`;
+  const { data, error } = await supabase
+    .rpc("work_board_counts", {
+      p_stale_days: THRESHOLDS.staleLeadDays,
+      p_awaiting_days: THRESHOLDS.awaitingStudentCodeDays,
+      p_doc_types: DOC_TYPES.length,
+      p_closed_statuses: [...CLOSED_STATUSES],
+    })
+    .single();
 
-  const [stale, awaiting, applied, enrolled, dropped, docPeople] =
-    await Promise.all([
-      supabase
-        .from("people")
-        .select("id", { count: "exact", head: true })
-        .lt("last_event_at", daysAgo(THRESHOLDS.staleLeadDays))
-        .not("follow_up_status", "in", notClosed),
-
-      // ชำระแล้วแต่ยังไม่ได้รหัสนักศึกษา — จุดที่คนตกหล่นระหว่างรอสำนักทะเบียน
-      supabase
-        .from("applications")
-        .select("id", { count: "exact", head: true })
-        .is("student_code", null)
-        .lt("updated_at", daysAgo(THRESHOLDS.awaitingStudentCodeDays))
-        .in("status", ["รอเอกสาร", "รอชำระเงิน", "รอตรวจสอบ"]),
-
-      supabase
-        .from("applications")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", startOfMonthBangkok()),
-
-      supabase
-        .from("people")
-        .select("id", { count: "exact", head: true })
-        .eq("enrollment_status", "เรียนอยู่"),
-
-      supabase
-        .from("people")
-        .select("id", { count: "exact", head: true })
-        .eq("enrollment_status", "ดรอป"),
-
-      // นับคนที่มีการสมัครแล้วแต่เอกสารยังตรวจไม่ผ่านครบ
-      supabase
-        .from("applications")
-        .select("person_id, people!inner ( documents ( status ) )")
-        .limit(1000),
-    ]);
-
-  const incompleteDocuments = (docPeople.data ?? []).filter((row) => {
-    const passed = (row.people?.documents ?? []).filter(
-      (doc) => doc.status === "ผ่าน",
-    ).length;
-    return passed < DOC_TYPES.length;
-  }).length;
+  if (error) throw new Error(`อ่านกระดานงานค้างไม่สำเร็จ: ${error.message}`);
 
   return {
-    staleLeads: stale.count ?? 0,
-    awaitingStudentCode: awaiting.count ?? 0,
-    incompleteDocuments,
-    appliedThisMonth: applied.count ?? 0,
-    enrolled: enrolled.count ?? 0,
-    dropped: dropped.count ?? 0,
+    staleLeads: Number(data.stale_leads),
+    awaitingStudentCode: Number(data.awaiting_student_code),
+    incompleteDocuments: Number(data.incomplete_documents),
+    appliedThisMonth: Number(data.applied_this_month),
+    enrolled: Number(data.enrolled),
+    dropped: Number(data.dropped),
   };
 }
