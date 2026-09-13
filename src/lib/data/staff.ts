@@ -23,3 +23,24 @@ export async function currentStaffId(): Promise<string | null> {
 
   return data?.id ?? null;
 }
+
+/**
+ * ผู้ใช้ปัจจุบันเป็นหัวหน้าทีมไหม — ใช้ซ่อนปุ่มของการกระทำที่ย้อนไม่ได้เท่านั้น
+ * ด่านจริงอยู่ที่ policy ของฐานข้อมูล ซ่อนปุ่มอย่างเดียวไม่พอ
+ */
+export async function isTeamLead(): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data } = await supabase
+    .from("staff")
+    .select("role")
+    .eq("auth_user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return data?.role === "admin";
+}

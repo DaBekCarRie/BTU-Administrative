@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  escapeLikePattern,
   isOwnedStoragePath,
+  parseReferenceFilters,
   parseReferenceInput,
   REFERENCE_CATEGORIES,
   referenceStoragePath,
@@ -66,5 +68,32 @@ describe("path ใน storage", () => {
     expect(isOwnedStoragePath(DOC, `${DOC}/${FILE}.png`)).toBe(true);
     expect(isOwnedStoragePath(DOC, `${FILE}/${FILE}.png`)).toBe(false);
     expect(isOwnedStoragePath(DOC, `${DOC}/../people/x.png`)).toBe(false);
+  });
+});
+
+describe("ตัวกรองเอกสารอ้างอิง", () => {
+  it("ไม่มีค่า = ทั้งหมด", () => {
+    expect(parseReferenceFilters({})).toEqual({ q: "", category: "", year: "" });
+  });
+
+  it("อ่านคำค้น หมวด และปีได้ รวมถึง 'ไม่ผูกกับปี'", () => {
+    expect(parseReferenceFilters({ q: "  ตาราง  ", category: "ตารางสอบ", year: "2569" })).toEqual({
+      q: "ตาราง",
+      category: "ตารางสอบ",
+      year: "2569",
+    });
+    expect(parseReferenceFilters({ year: "none" }).year).toBe("none");
+  });
+
+  it("ค่าที่ไม่รู้จักถูกทิ้ง", () => {
+    expect(parseReferenceFilters({ category: "ลับ", year: "2026" })).toEqual({ q: "", category: "", year: "" });
+  });
+
+  it("คำค้นยาวเกินถูกตัด ไม่ส่งข้อความยาว ๆ ไปฐานข้อมูล", () => {
+    expect(parseReferenceFilters({ q: "ก".repeat(500) }).q).toHaveLength(100);
+  });
+
+  it("อักขระพิเศษของ LIKE ถูก escape — ค้น 50% ต้องหา 50% ไม่ใช่ทุกอย่างที่ขึ้นต้นด้วย 50", () => {
+    expect(escapeLikePattern("50%_off\\")).toBe("50\\%\\_off\\\\");
   });
 });

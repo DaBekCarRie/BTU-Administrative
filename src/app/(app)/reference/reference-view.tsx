@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/client";
 
 import {
   createReferenceDocument,
+  deleteReferenceDocument,
   openReferenceFile,
   recordReferenceFile,
   updateReferenceDocument,
@@ -315,7 +316,73 @@ function OpenFileButton({ fileId, fileName }: { fileId: string; fileName: string
   );
 }
 
-export function ReferenceList({ items }: { items: ReferenceItem[] }) {
+/** ลบย้อนไม่ได้ — ถามยืนยันพร้อมบอกว่าไฟล์จะหายด้วยกี่ไฟล์ */
+function DeleteReferenceDialog({ item }: { item: ReferenceItem }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="text-destructive" data-testid="delete-reference">
+          ลบ
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="text-left">
+          <DialogTitle>ลบเอกสารอ้างอิงนี้?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm">
+          “{item.title}” และไฟล์ทั้ง {item.files.length} ไฟล์จะถูกลบ <strong>ลบแล้วกู้คืนไม่ได้</strong>
+        </p>
+        <div className="mt-2 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+            ยกเลิก
+          </Button>
+          <Button
+            variant="destructive"
+            data-testid="confirm-delete-reference"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await deleteReferenceDocument(item.id);
+                if (result.error) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("ลบเอกสารอ้างอิงแล้ว");
+                setOpen(false);
+                router.refresh();
+              })
+            }
+          >
+            {pending ? "กำลังลบ…" : "ลบถาวร"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ReferenceList({
+  items,
+  canDelete,
+  filtered,
+}: {
+  items: ReferenceItem[];
+  /** หัวหน้าทีมเท่านั้น — เจ้าหน้าที่ไม่เห็นปุ่มเลย ไม่ใช่ปุ่มสีจางกดไม่ได้ */
+  canDelete: boolean;
+  filtered: boolean;
+}) {
+  if (items.length === 0 && filtered) {
+    return (
+      <div className="rounded-md border border-dashed p-10 text-center">
+        <p className="font-medium">ไม่พบเอกสารอ้างอิงที่ตรงกับตัวกรอง</p>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-10 text-center">
@@ -330,7 +397,7 @@ export function ReferenceList({ items }: { items: ReferenceItem[] }) {
   return (
     <ul className="flex flex-col gap-3" data-testid="reference-list">
       {items.map((item) => (
-        <li key={item.id} className="rounded-md border p-4" data-testid="reference-item">
+        <li key={item.id} className="rounded-md border p-4" data-testid="reference-item" data-reference-id={item.id}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <h2 className="font-medium break-words">{item.title}</h2>
@@ -349,6 +416,7 @@ export function ReferenceList({ items }: { items: ReferenceItem[] }) {
             <div className="flex shrink-0 gap-2">
               <AttachFilesButton documentId={item.id} />
               <EditReferenceDialog item={item} />
+              {canDelete ? <DeleteReferenceDialog item={item} /> : null}
             </div>
           </div>
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createReferenceFileUrl } from "@/lib/data/reference-documents";
-import { currentStaffId } from "@/lib/data/staff";
+import { currentStaffId, isTeamLead } from "@/lib/data/staff";
 import {
   isOwnedStoragePath,
   parseReferenceInput,
@@ -99,4 +99,44 @@ export async function openReferenceFile(fileId: string): Promise<{ url?: string;
   } catch (cause) {
     return { error: message(cause) };
   }
+}
+
+/**
+ * ลบเอกสารอ้างอิงพร้อมไฟล์ — หัวหน้าทีมเท่านั้น ด่านจริงคือ policy ของฐานข้อมูลและ bucket
+ *
+ * ลบไฟล์ใน storage ก่อน แล้วค่อยลบแถว: ถ้าลบไฟล์ไม่ได้ต้องหยุด ไม่งั้นแถวหายแต่ไฟล์ค้างเป็นกำพร้า
+ * Supabase ไม่ error เมื่อ RLS กันการลบ แต่คืนรายการว่าง — จึงต้องนับว่าลบได้ครบจริง
+ */
+export async function deleteReferenceDocument(id: string): Promise<Result> {
+  // บอกเหตุผลให้ตรงก่อนเริ่ม — policy ยังกันซ้ำอีกชั้นถ้ามีคนเรียกตรง
+  if (!(await isTeamLead())) return { error: "ลบได้เฉพาะหัวหน้าทีม" };
+
+  const supabase = await createClient();
+
+  const { data: files, error: readError } = await supabase
+    .from("reference_document_files")
+    .select("storage_path")
+    .eq("reference_document_id", id);
+  if (readError) return { error: `อ่านไฟล์ของรายการไม่สำเร็จ: ${readError.message}` };
+
+  const paths = (files ?? []).map((file) => file.storage_path);
+  if (paths.length > 0) {
+    const { data: removed, error: removeError } = await supabase.storage.from("reference").remove(paths);
+    if (removeError) return { error: `ลบไฟล์ไม่สำเร็จ: ${removeError.message}` };
+    if ((removed ?? []).length !== paths.length) {
+      // ไฟล์บางไฟล์อาจหายจาก storage ไปก่อนแล้ว — ไม่ลบแถว ให้คนดูว่าเกิดอะไรขึ้น
+      return { error: `ลบไฟล์ได้ ${(removed ?? []).length} จาก ${paths.length} ไฟล์ จึงยังไม่ลบรายการ` };
+    }
+  }
+
+  const { data: deleted, error } = await supabase
+    .from("reference_documents")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) return { error: `ลบเอกสารอ้างอิงไม่สำเร็จ: ${error.message}` };
+  if ((deleted ?? []).length === 0) return { error: "ลบได้เฉพาะหัวหน้าทีม" };
+
+  revalidatePath("/reference");
+  return { ok: true };
 }

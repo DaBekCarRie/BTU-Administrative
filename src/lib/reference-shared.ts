@@ -64,3 +64,39 @@ export function isOwnedStoragePath(documentId: string, storagePath: string): boo
   const match = storagePath.match(OWNED_PATH);
   return !!match && match[1] === documentId;
 }
+
+export type ReferenceFilters = {
+  q: string;
+  category: string;
+  /** ปี พ.ศ. · "none" = ไม่ผูกกับปี · "" = ทุกปี */
+  year: string;
+};
+
+const SEARCH_MAX = 100;
+
+function one(value: string | string[] | undefined): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** แปลง query string เป็นตัวกรอง — ค่าที่ไม่รู้จักถูกทิ้ง ไม่ใช่ส่งต่อไปที่ฐานข้อมูล */
+export function parseReferenceFilters(
+  params: Record<string, string | string[] | undefined>,
+): ReferenceFilters {
+  const category = one(params.category);
+  const year = one(params.year);
+  const yearNumber = Number(year);
+
+  return {
+    q: one(params.q).slice(0, SEARCH_MAX),
+    category: (REFERENCE_CATEGORIES as readonly string[]).includes(category) ? category : "",
+    year:
+      year === "none" || (Number.isInteger(yearNumber) && yearNumber >= 2500 && yearNumber <= 2700)
+        ? year
+        : "",
+  };
+}
+
+/** กันไม่ให้ % และ _ ในคำค้นกลายเป็น wildcard ของ ILIKE */
+export function escapeLikePattern(text: string): string {
+  return text.replace(/[\\%_]/g, (char) => `\\${char}`);
+}

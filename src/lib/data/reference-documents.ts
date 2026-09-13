@@ -1,6 +1,10 @@
 import "server-only";
 
-import type { ReferenceCategory } from "@/lib/reference-shared";
+import {
+  escapeLikePattern,
+  type ReferenceCategory,
+  type ReferenceFilters,
+} from "@/lib/reference-shared";
 import { createClient } from "@/lib/supabase/server";
 
 const SIGNED_URL_SECONDS = 60;
@@ -25,10 +29,10 @@ export type ReferenceItem = {
   files: ReferenceFile[];
 };
 
-/** เอกสารอ้างอิงทั้งหมด ล่าสุดก่อน — อ่านได้เฉพาะเจ้าหน้าที่ (RLS) */
-export async function listReferenceDocuments(): Promise<ReferenceItem[]> {
+/** เอกสารอ้างอิง ล่าสุดก่อน กรองตามคำค้น หมวด และปี — อ่านได้เฉพาะเจ้าหน้าที่ (RLS) */
+export async function listReferenceDocuments(filters: ReferenceFilters): Promise<ReferenceItem[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("reference_documents")
     .select(
       `id, category, title, academic_year, created_at, updated_at,
@@ -37,6 +41,14 @@ export async function listReferenceDocuments(): Promise<ReferenceItem[]> {
     )
     .order("updated_at", { ascending: false })
     .order("created_at", { ascending: true, referencedTable: "reference_document_files" });
+
+  // พิมพ์ไม่ครบก็เจอ — ค้นเป็นส่วนหนึ่งของชื่อเรื่อง
+  if (filters.q) query = query.ilike("title", `%${escapeLikePattern(filters.q)}%`);
+  if (filters.category) query = query.eq("category", filters.category as ReferenceCategory);
+  if (filters.year === "none") query = query.is("academic_year", null);
+  else if (filters.year) query = query.eq("academic_year", Number(filters.year));
+
+  const { data, error } = await query;
 
   if (error) throw new Error(`อ่านเอกสารอ้างอิงไม่สำเร็จ: ${error.message}`);
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 
 import { toFunnelSearchParams, type FunnelFilters } from "@/lib/data/funnel-filters";
 import { Constants } from "@/types/database";
@@ -27,8 +27,16 @@ export function HomeFunnelFilters({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // ค่าล่าสุดที่เลือก — props และ URL ยังเป็นค่าเก่าจนหน้าใหม่ render เสร็จ
+  // ถ้าอ่านจากสองอย่างนั้น เปลี่ยนสองช่องติดกันเร็ว ๆ ค่าที่เพิ่งล้างจะกลับมา
+  const latest = useRef(filters);
+  useEffect(() => {
+    latest.current = filters;
+  }, [filters]);
+
   function update(next: Partial<FunnelFilters>) {
-    const query = toFunnelSearchParams({ ...filters, ...next }).toString();
+    latest.current = { ...latest.current, ...next };
+    const query = toFunnelSearchParams(latest.current).toString();
     startTransition(() => router.push(query ? `/?${query}` : "/"));
   }
 

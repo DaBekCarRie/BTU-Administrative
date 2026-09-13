@@ -87,6 +87,21 @@ test.describe("หน้าแรก", () => {
     await expect(page.getByTestId("funnel-filters").getByLabel("ภาค", { exact: true })).toHaveValue("");
   });
 
+  test("เปลี่ยนตัวกรองสองช่องติดกันเร็ว ๆ ค่าที่เพิ่งล้างไม่กลับมา", async ({ page }) => {
+    await page.goto("/");
+    const filters = page.getByTestId("funnel-filters");
+    const faculty = filters.getByLabel("คณะ", { exact: true });
+    const firstFaculty = await faculty.locator("option").nth(1).getAttribute("value");
+    await faculty.selectOption(firstFaculty!);
+    await page.waitForURL(/[?&]faculty=/);
+
+    // ไม่รอให้หน้าโหลดใหม่ระหว่างสองคำสั่ง — เคยทำให้คณะที่ล้างไปแล้วกลับมาใน URL
+    await faculty.selectOption("");
+    await filters.getByLabel("ภาค", { exact: true }).selectOption("ทางไกล");
+    await page.waitForURL(/[?&]mode=/);
+    await expect(page).not.toHaveURL(/faculty=/);
+  });
+
   test("เลื่อนดูย้อนหลังได้หกเดือน และเทียบกับเดือนก่อนหน้าของเดือนที่เลือก", async ({ page }) => {
     await page.goto("/");
     const month = page.getByTestId("funnel-filters").getByLabel("เดือน", { exact: true });
