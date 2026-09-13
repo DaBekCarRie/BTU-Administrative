@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] ตั้ง `SUPABASE_SERVICE_ROLE_KEY` ใน `.env.local` แล้วสคริปต์สร้างบัญชีทดสอบสามบัญชี
       พร้อมยืนยันอีเมลให้เอง รันซ้ำได้โดยไม่สร้างซ้ำ (`mailer_autoconfirm` ปิดอยู่
