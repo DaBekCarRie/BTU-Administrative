@@ -811,6 +811,14 @@ export type Database = {
         Args: { p_id: string; p_state: Json }
         Returns: undefined
       }
+      document_desk_queue: {
+        Args: { p_limit: number }
+        Returns: {
+          person_id: string
+          total_people: number
+          waiting_since: string
+        }[]
+      }
       merge_people: {
         Args: { p_details: Json; p_merged_id: string; p_survivor_id: string }
         Returns: undefined

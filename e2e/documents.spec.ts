@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 import { uniqueName } from "./helpers";
 
@@ -63,9 +64,13 @@ test.describe("เอกสารประจำตัว", () => {
     );
   });
 
-  test("หน้าเอกสารแสดงคนที่ยังไม่ครบ", async ({ page }) => {
+  test("หน้าเอกสารแสดงคนที่ส่งเอกสารมาแล้วแต่ยังไม่ครบ", async ({ page }) => {
+    // เดิมเทสต์นี้สร้างคนที่ไม่มีเอกสารเลยแล้วคาดว่าจะเห็น 0/4 — ซึ่งพึ่งบั๊กของใบ 10
+    // โต๊ะตรวจแสดงเฉพาะคนที่ส่งเอกสารมาแล้ว จึงต้องอัปโหลดก่อนหนึ่งชิ้น
     const name = uniqueName("ค้างเอกสาร");
     await createPerson(page, name);
+    await page.getByTestId("file-รูปถ่าย").setInputFiles(FIXTURE);
+    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว");
 
     await page.goto("/documents");
     const row = page.getByTestId("incomplete-rows").locator("tr", { hasText: name });
@@ -132,5 +137,59 @@ test.describe("เอกสารประจำตัว", () => {
     await page.getByTestId("desk-reject-reason").selectOption("รูปไม่ชัด อ่านไม่ออก");
     await page.getByTestId("desk-confirm-reject").click();
     await expect(page.getByText("ส่งกลับให้แก้ไขแล้ว · รูปไม่ชัด อ่านไม่ออก")).toBeVisible();
+  });
+});
+
+test.describe("โต๊ะตรวจเห็นคนที่ส่งเอกสารครบทุกคน (ใบ 10)", () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const email = process.env.E2E_EMAIL;
+  const password = process.env.E2E_PASSWORD;
+
+  test("ทุกคนที่มีเอกสารรอตรวจอยู่บนโต๊ะ ไม่ว่าเหตุการณ์ล่าสุดจะเก่าแค่ไหน", async ({ page }) => {
+    test.skip(!url || !anonKey || !email || !password, "ต้องมีค่าเชื่อมต่อและบัญชีทดสอบใน .env.local");
+
+    // เคยหลุดเพราะโต๊ะเลือก 100 คนที่มีเหตุการณ์ล่าสุดก่อน แล้วค่อยดูว่ามีเอกสารไหม
+    // ถ่ายรายชื่อจากฐานข้อมูลตรงก่อนเปิดหน้า — เทสต์อื่นที่รันขนานเพิ่มได้แต่ไม่ทำให้คนเดิมหาย
+    const client = createClient(url!, anonKey!, { auth: { persistSession: false } });
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: email!,
+      password: password!,
+    });
+    expect(signInError).toBeNull();
+    const { data, error } = await client.from("documents").select("person_id").eq("status", "ส่งแล้ว");
+    expect(error).toBeNull();
+    const pending = [...new Set((data ?? []).map((d) => d.person_id))];
+    expect(pending.length).toBeGreaterThan(0);
+
+    await page.goto("/documents");
+    await page.getByRole("tab", { name: /ทั้งหมด/ }).click();
+    const shown = new Set(
+      await page
+        .getByTestId("desk-row")
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-person-id"))),
+    );
+    expect(pending.filter((id) => !shown.has(id))).toEqual([]);
+  });
+
+  test("แท็บทั้งหมดไม่มีคนที่ยังไม่ส่งเอกสาร และตัวเลขบนแท็บเท่ากับจำนวนแถว", async ({ page }) => {
+    const name = uniqueName("ไม่มีเอกสาร");
+    await createPerson(page, name);
+
+    await page.goto("/documents");
+    const allTab = page.getByRole("tab", { name: /ทั้งหมด/ });
+    await allTab.click();
+
+    const rows = page.getByTestId("desk-row");
+    await expect(rows.filter({ hasText: name })).toHaveCount(0);
+
+    const uploaded = await rows.evaluateAll((els) =>
+      els.map((el) => Number(el.getAttribute("data-uploaded"))),
+    );
+    expect(uploaded.length).toBeGreaterThan(0);
+    expect(uploaded.filter((n) => n < 1)).toEqual([]);
+
+    const tabCount = Number((await allTab.innerText()).replace(/\D/g, ""));
+    expect(tabCount).toBe(uploaded.length);
   });
 });

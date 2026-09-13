@@ -16,11 +16,13 @@ export default async function DocumentsPage() {
     if (staff?.display_name) staffName = staff.display_name;
   }
 
-  const submissions = await listDeskSubmissions();
+  const { submissions, total, truncated } = await listDeskSubmissions();
 
   return (
     <DocumentDesk
       initialSubmissions={submissions}
+      total={total}
+      truncated={truncated}
       staffName={staffName}
     />
   );

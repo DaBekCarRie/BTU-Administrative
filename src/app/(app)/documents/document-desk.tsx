@@ -64,9 +64,14 @@ function statusDotColor(status: string) {
 
 export function DocumentDesk({
   initialSubmissions,
+  total,
+  truncated,
   staffName,
 }: {
   initialSubmissions: DeskSubmission[];
+  /** คนที่ส่งเอกสารมาแล้วทั้งหมด — มากกว่าที่แสดงได้เมื่อ truncated */
+  total: number;
+  truncated: boolean;
   staffName: string;
 }) {
   const router = useRouter();
@@ -241,6 +246,12 @@ export function DocumentDesk({
           )}{" "}
           ไฟล์
         </p>
+        {truncated ? (
+          <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400" data-testid="desk-truncated">
+            แสดง {initialSubmissions.length.toLocaleString("th-TH")} จาก {total.toLocaleString("th-TH")} ราย
+            — เรียงของที่รอตรวจนานที่สุดก่อน รายการที่เหลือจะขึ้นมาเมื่อตรวจชุดนี้แล้ว
+          </p>
+        ) : null}
       </header>
 
       {/* ===================== TABS ===================== */}
@@ -298,6 +309,9 @@ export function DocumentDesk({
                   <button
                     key={sub.id}
                     type="button"
+                    data-testid="desk-row"
+                    data-person-id={sub.id}
+                    data-uploaded={sub.uploaded}
                     onClick={() => {
                       setSelectedId(sub.id);
                       setRejectOpen(false);

@@ -85,13 +85,6 @@ export async function createSignedUrl(storagePath: string): Promise<string> {
   return data.signedUrl;
 }
 
-export type IncompletePerson = {
-  id: string;
-  fullName: string;
-  passed: number;
-  uploaded: number;
-};
-
 export type DeskDoc = {
   id?: string;
   docType: DocType;
@@ -111,81 +104,93 @@ export type DeskSubmission = {
   facultyName: string | null;
   studyMode: string | null;
   ownerName: string | null;
-  uploadedAt: string;
+  /** เอกสารที่ส่งแล้วชิ้นที่รอนานที่สุดเริ่มรอเมื่อไหร่ — ว่างถ้าไม่มีชิ้นไหนรอตรวจ */
+  waitingSince: string | null;
   passed: number;
   uploaded: number;
   docs: Record<DocType, DeskDoc>;
 };
 
-/** รายการผู้ยื่นเอกสารสำหรับโต๊ะตรวจเอกสาร Desk View */
-export async function listDeskSubmissions(limit = 100): Promise<DeskSubmission[]> {
+export type DeskQueue = {
+  submissions: DeskSubmission[];
+  /** จำนวนคนที่ส่งเอกสารมาแล้วทั้งหมด ไม่ใช่แค่ที่แสดง */
+  total: number;
+  truncated: boolean;
+};
+
+/** มากพอสำหรับงานประจำวัน ถ้าเกินหน้าจอบอกว่ามีอีกกี่ราย ไม่ตัดเงียบ */
+const DESK_LIMIT = 200;
+
+/**
+ * คิวของโต๊ะตรวจเอกสาร — เลือกจากคนที่มีเอกสารจริง เรียงของที่รอตรวจนานที่สุดก่อน
+ * เดิมเลือกจาก 100 คนที่มีเหตุการณ์ล่าสุด คนที่ส่งเอกสารไว้แล้วเงียบไปจึงหลุดหาย (ใบ 10)
+ */
+export async function listDeskSubmissions(limit = DESK_LIMIT): Promise<DeskQueue> {
   const supabase = await createClient();
+
+  const { data: queue, error: queueError } = await supabase.rpc("document_desk_queue", {
+    p_limit: limit,
+  });
+  if (queueError) throw new Error(`อ่านคิวโต๊ะตรวจไม่สำเร็จ: ${queueError.message}`);
+
+  const order = (queue ?? []).map((row) => row.person_id);
+  const total = queue?.[0]?.total_people ?? 0;
+  if (order.length === 0) return { submissions: [], total: 0, truncated: false };
 
   const { data, error } = await supabase
     .from("people")
     .select(
-      `id, full_name, study_mode, last_event_at,
+      `id, full_name, study_mode,
        programs ( name, faculties ( name ) ),
        staff ( display_name ),
-       documents ( id, doc_type, status, reject_reason, storage_path, reviewed_at, created_at, staff:reviewed_by ( display_name ) )`
+       documents ( id, doc_type, status, reject_reason, storage_path, reviewed_at, created_at, staff:reviewed_by ( display_name ) )`,
     )
-    .order("last_event_at", { ascending: false })
-    .limit(limit);
+    .in("id", order);
 
   if (error) throw new Error(`อ่านรายการเอกสารไม่สำเร็จ: ${error.message}`);
 
-  return (data ?? []).map((row) => {
+  const waitingSince = new Map(
+    (queue ?? []).map((row) => [row.person_id, (row.waiting_since as string | null) ?? null]),
+  );
+  const byId = new Map((data ?? []).map((row) => [row.id, row]));
+
+  const submissions = order.flatMap((id) => {
+    const row = byId.get(id);
+    if (!row) return [];
+
     const docsMap = {} as Record<DocType, DeskDoc>;
     for (const type of DOC_TYPES) {
       const found = (row.documents ?? []).find((d) => d.doc_type === type);
-      if (found) {
-        docsMap[type] = {
-          id: found.id,
-          docType: type,
-          status: found.status as "ผ่าน" | "ส่งแล้ว" | "ไม่ผ่าน",
-          rejectReason: found.reject_reason,
-          storagePath: found.storage_path,
-          reviewedAt: found.reviewed_at,
-          reviewedByName: found.staff?.display_name ?? null,
-          createdAt: found.created_at,
-          isSensitive: SENSITIVE_DOC_TYPES.has(type),
-        };
-      } else {
-        docsMap[type] = {
-          docType: type,
-          status: "ยังไม่ส่ง",
-          isSensitive: SENSITIVE_DOC_TYPES.has(type),
-        };
-      }
+      docsMap[type] = found
+        ? {
+            id: found.id,
+            docType: type,
+            status: found.status,
+            rejectReason: found.reject_reason,
+            storagePath: found.storage_path,
+            reviewedAt: found.reviewed_at,
+            reviewedByName: found.staff?.display_name ?? null,
+            createdAt: found.created_at,
+            isSensitive: SENSITIVE_DOC_TYPES.has(type),
+          }
+        : { docType: type, status: "ยังไม่ส่ง", isSensitive: SENSITIVE_DOC_TYPES.has(type) };
     }
 
-    const passedCount = Object.values(docsMap).filter((d) => d.status === "ผ่าน").length;
-    const uploadedCount = (row.documents ?? []).length;
-
-    return {
-      id: row.id,
-      fullName: row.full_name,
-      programName: row.programs?.name ?? null,
-      facultyName: row.programs?.faculties?.name ?? null,
-      studyMode: row.study_mode,
-      ownerName: row.staff?.display_name ?? null,
-      uploadedAt: row.last_event_at ?? new Date().toISOString(),
-      passed: passedCount,
-      uploaded: uploadedCount,
-      docs: docsMap,
-    };
+    return [
+      {
+        id: row.id,
+        fullName: row.full_name,
+        programName: row.programs?.name ?? null,
+        facultyName: row.programs?.faculties?.name ?? null,
+        studyMode: row.study_mode,
+        ownerName: row.staff?.display_name ?? null,
+        waitingSince: waitingSince.get(id) ?? null,
+        passed: Object.values(docsMap).filter((d) => d.status === "ผ่าน").length,
+        uploaded: (row.documents ?? []).length,
+        docs: docsMap,
+      },
+    ];
   });
-}
 
-/** ผู้เรียนที่เอกสารยังไม่ครบ สำหรับหน้าเอกสารและกระดานงาน */
-export async function listIncompleteDocuments(limit = 100): Promise<IncompletePerson[]> {
-  const list = await listDeskSubmissions(limit);
-  return list
-    .filter((p) => p.passed < DOC_TYPES.length)
-    .map((p) => ({
-      id: p.id,
-      fullName: p.fullName,
-      passed: p.passed,
-      uploaded: p.uploaded,
-    }));
+  return { submissions, total, truncated: total > submissions.length };
 }
