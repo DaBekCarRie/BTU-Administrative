@@ -1,4 +1,7 @@
 import { FUNNEL_STAGES, type FunnelComparison } from "@/lib/data/funnel";
+import type { FunnelFilters } from "@/lib/data/funnel-filters";
+
+import { HomeFunnelFilters } from "./home-funnel-filters";
 
 /** ส่วนต่างเป็นข้อความสีกลาง — ไม่ใช่การประเมินว่าดีหรือแย่ จึงไม่ใช้เขียวแดง */
 function deltaText(current: number, previous: number): string {
@@ -13,7 +16,17 @@ function deltaText(current: number, previous: number): string {
  * ตัวเลขล้วน ไม่มีกราฟ — spec รอให้ทีมใช้จริงก่อนจึงรู้ว่าอยากเห็นกราฟอะไร
  * ไม่มีตัวเลขแยกรายบุคคลของเจ้าหน้าที่ (ADR-0004)
  */
-export function HomeFunnel({ funnel }: { funnel: FunnelComparison }) {
+export function HomeFunnel({
+  funnel,
+  filters,
+  faculties,
+  months,
+}: {
+  funnel: FunnelComparison;
+  filters: FunnelFilters;
+  faculties: { id: string; name: string }[];
+  months: string[];
+}) {
   const { current, previous } = funnel;
 
   return (
@@ -33,6 +46,8 @@ export function HomeFunnel({ funnel }: { funnel: FunnelComparison }) {
           คนที่ติดต่อเข้ามาใน {current.label} ตอนนี้ไปถึงขั้นไหนแล้ว · เทียบกับ {previous.label}
         </p>
       </div>
+
+      <HomeFunnelFilters filters={filters} faculties={faculties} months={months} />
 
       <ol className="grid grid-cols-1 gap-2 sm:grid-cols-5">
         {FUNNEL_STAGES.map((stage, index) => {

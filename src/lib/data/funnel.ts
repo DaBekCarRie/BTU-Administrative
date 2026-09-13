@@ -1,6 +1,8 @@
 import "server-only";
 
+import type { FunnelFilters } from "@/lib/data/funnel-filters";
 import { monthRangeBangkok } from "@/lib/date";
+import type { Enums } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 
 /** ขั้นของกรวย เรียงตามลำดับที่คนเดินผ่าน */
@@ -19,11 +21,16 @@ export type FunnelMonth = { label: string; counts: FunnelCounts };
 
 export type FunnelComparison = { current: FunnelMonth; previous: FunnelMonth };
 
-async function funnelFor(offsetMonths: number): Promise<FunnelMonth> {
+async function funnelFor(offsetMonths: number, filters: FunnelFilters): Promise<FunnelMonth> {
   const { from, to, label } = monthRangeBangkok(offsetMonths);
   const supabase = await createClient();
   const { data, error } = await supabase
-    .rpc("application_funnel", { p_from: from, p_to: to })
+    .rpc("application_funnel", {
+      p_from: from,
+      p_to: to,
+      p_faculty_id: filters.facultyId || undefined,
+      p_study_mode: (filters.studyMode || undefined) as Enums<"study_mode"> | undefined,
+    })
     .single();
   if (error) throw new Error(`อ่านกรวยการรับสมัครไม่สำเร็จ: ${error.message}`);
 
@@ -40,10 +47,13 @@ async function funnelFor(offsetMonths: number): Promise<FunnelMonth> {
 }
 
 /**
- * กรวยของเดือนนี้เทียบเดือนที่แล้ว — นับแบบ cohort ของคนที่ติดต่อเข้ามาในเดือนนั้น
+ * กรวยของเดือนที่เลือกเทียบเดือนก่อนหน้า — นับแบบ cohort ของคนที่ติดต่อเข้ามาในเดือนนั้น
  * ตัวเลขเดี่ยวบอกไม่ได้ว่าดีหรือแย่ ต้องมีของเทียบ
  */
-export async function getFunnelComparison(): Promise<FunnelComparison> {
-  const [current, previous] = await Promise.all([funnelFor(0), funnelFor(-1)]);
+export async function getFunnelComparison(filters: FunnelFilters): Promise<FunnelComparison> {
+  const [current, previous] = await Promise.all([
+    funnelFor(filters.monthOffset, filters),
+    funnelFor(filters.monthOffset - 1, filters),
+  ]);
   return { current, previous };
 }

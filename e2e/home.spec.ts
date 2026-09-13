@@ -63,6 +63,52 @@ test.describe("หน้าแรก", () => {
     }
   });
 
+  test("กรองตามคณะแล้วตัวเลขไม่เกินภาพรวม และค่าอยู่ใน URL", async ({ page }) => {
+    await page.goto("/");
+    const contacted = page.getByTestId("funnel-contacted");
+    const overall = Number((await contacted.locator(".font-mono").innerText()).replace(/\D/g, ""));
+
+    const faculty = page.getByTestId("funnel-filters").getByLabel("คณะ", { exact: true });
+    const firstFaculty = await faculty.locator("option").nth(1).getAttribute("value");
+    await faculty.selectOption(firstFaculty!);
+    await page.waitForURL(/[?&]faculty=/);
+
+    const filtered = Number((await contacted.locator(".font-mono").innerText()).replace(/\D/g, ""));
+    expect(filtered).toBeLessThanOrEqual(overall);
+    await expect(page.getByTestId("funnel-filters").getByLabel("คณะ", { exact: true })).toHaveValue(firstFaculty!);
+
+    await page.getByTestId("funnel-filters").getByLabel("ภาค", { exact: true }).selectOption("ทางไกล");
+    await page.waitForURL(/[?&]mode=/);
+    await expect(page).toHaveURL(/faculty=/);
+
+    await page.getByRole("link", { name: "ล้างตัวกรอง" }).click();
+    await page.waitForURL(/127\.0\.0\.1:\d+\/$/);
+    await expect(page.getByTestId("funnel-filters").getByLabel("คณะ", { exact: true })).toHaveValue("");
+    await expect(page.getByTestId("funnel-filters").getByLabel("ภาค", { exact: true })).toHaveValue("");
+  });
+
+  test("เลื่อนดูย้อนหลังได้หกเดือน และเทียบกับเดือนก่อนหน้าของเดือนที่เลือก", async ({ page }) => {
+    await page.goto("/");
+    const month = page.getByTestId("funnel-filters").getByLabel("เดือน", { exact: true });
+    await expect(month.locator("option")).toHaveCount(6);
+
+    const labels = await month.locator("option").allInnerTexts();
+    await month.selectOption("-2");
+    await page.waitForURL(/[?&]month=-2/);
+
+    const funnel = page.getByTestId("home-funnel");
+    // เดือนที่เลือกคือ labels[2] และเทียบกับเดือนก่อนหน้าคือ labels[3]
+    await expect(funnel).toContainText(`ติดต่อเข้ามาใน ${labels[2]}`);
+    await expect(funnel).toContainText(`เทียบกับ ${labels[3]}`);
+  });
+
+  test("ค่าตัวกรองแปลก ๆ ใน URL ไม่ทำให้หน้าพัง", async ({ page }) => {
+    await page.goto("/?faculty=not-a-uuid&mode=ออนไลน์&month=-99");
+    await expect(page.getByTestId("home-funnel")).toBeVisible();
+    await expect(page.getByTestId("funnel-filters").getByLabel("เดือน", { exact: true })).toHaveValue("0");
+    await expect(page.getByTestId("funnel-filters").getByLabel("คณะ", { exact: true })).toHaveValue("");
+  });
+
   test.describe("มือถือ", () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
@@ -70,6 +116,7 @@ test.describe("หน้าแรก", () => {
       await page.goto("/");
       await expect(page.getByTestId("mobile-header")).toContainText("หน้าแรก");
       await expect(page.getByTestId("funnel-contacted")).toBeVisible();
+      await expect(page.getByTestId("funnel-filters").getByLabel("คณะ", { exact: true })).toBeVisible();
       await expect(page.getByTestId("queue-summary")).toBeVisible();
       // แถบล่างยังเป็นงานประจำวันสามอย่างเหมือนเดิม
       await expect(page.getByTestId("mobile-bottom-/queue")).toBeVisible();

@@ -808,7 +808,12 @@ export type Database = {
     }
     Functions: {
       application_funnel: {
-        Args: { p_from: string; p_to: string }
+        Args: {
+          p_faculty_id?: string
+          p_from: string
+          p_study_mode?: Database["public"]["Enums"]["study_mode"]
+          p_to: string
+        }
         Returns: {
           applied: number
           contacted: number
