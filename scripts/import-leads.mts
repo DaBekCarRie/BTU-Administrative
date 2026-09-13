@@ -22,9 +22,10 @@ import {
   normalizeProgram,
   normalizeStudyMode,
   parseCallDateField,
+  parseContactDate,
   parseFollowUp,
-  parseThaiDate,
 } from "../src/lib/import/normalize";
+import { parseCsv } from "../src/lib/import/csv";
 
 loadEnv({ path: ".env.local", quiet: true });
 
@@ -38,42 +39,6 @@ const limit = limitIndex >= 0 ? Number(args[limitIndex + 1]) : Infinity;
 if (!filePath) {
   console.error("ต้องระบุไฟล์: --file <path>.csv");
   process.exit(1);
-}
-
-/** อ่าน CSV แบบรองรับเครื่องหมายคำพูดและขึ้นบรรทัดใหม่ในเซลล์ */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    if (quoted) {
-      if (char === '"') {
-        if (text[i + 1] === '"') {
-          cell += '"';
-          i += 1;
-        } else quoted = false;
-      } else cell += char;
-      continue;
-    }
-    if (char === '"') quoted = true;
-    else if (char === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (char === "\n") {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else if (char !== "\r") cell += char;
-  }
-  if (cell !== "" || row.length > 0) {
-    row.push(cell);
-    rows.push(row);
-  }
-  return rows;
 }
 
 const COL = {
@@ -150,6 +115,7 @@ async function main() {
   let followUpCount = 0;
   let statusFromDateField = 0;
   let futureAppointments = 0;
+  let futureContactDates = 0;
 
   for (const [index, row] of dataRows.entries()) {
     if (prepared.length >= limit) break;
@@ -161,8 +127,16 @@ async function main() {
       continue;
     }
 
-    const contactedAt =
-      parseThaiDate(row[COL.contactedAt]) ?? new Date().toISOString();
+    const contactDate = parseContactDate(row[COL.contactedAt]);
+    if (contactDate.rejectedAsFuture) {
+      futureContactDates += 1;
+      problems.push({
+        row: rowNumber,
+        name,
+        what: `วันติดต่อเข้ามาอยู่ในอนาคต (${cleanText(row[COL.contactedAt])}) — ทิ้งค่าวันที่`,
+      });
+    }
+    const contactedAt = contactDate.value ?? new Date().toISOString();
 
     const facultyName = normalizeFaculty(row[COL.faculty]);
     const rawFaculty = cleanText(row[COL.faculty]);
@@ -291,6 +265,7 @@ async function main() {
   console.log(`เหตุการณ์โทรตาม       ${followUpCount}`);
   console.log(`สถานะที่ดึงจากช่องวันที่ ${statusFromDateField}`);
   console.log(`นัดโทรที่ยังไม่ถึงกำหนด  ${futureAppointments}`);
+  console.log(`วันติดต่อเข้ามาในอนาคต  ${futureContactDates} (ทิ้งค่าวันที่ ใช้เวลานำเข้าแทน)`);
   console.log(`ชื่อซ้ำ                ${duplicateNames.length} กลุ่ม (${duplicateNames.reduce((n, [, r]) => n + r.length - 1, 0)} แถวเกิน)`);
   console.log(`เบอร์ซ้ำ               ${duplicatePhones.length} กลุ่ม`);
 

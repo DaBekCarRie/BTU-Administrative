@@ -242,6 +242,26 @@ export function parseThaiDate(input: string | null): string | null {
   return null;
 }
 
+/** เผื่อเครื่องที่กรอกตั้งวันผิดเล็กน้อย เกินนี้ถือว่าพิมพ์ผิดแน่นอน */
+const CONTACT_DATE_FUTURE_TOLERANCE_DAYS = 30;
+
+/**
+ * วันที่คนติดต่อเข้ามา — ต้องไม่อยู่ในอนาคต ต่างจากวันนัดโทรที่เป็นอนาคตโดยธรรมชาติ
+ * ด่านหนึ่งปีของ parseThaiDate กว้างเกินไปสำหรับช่องนี้: เคยมี 26 แถวรอดมาได้
+ * แล้วไปทำให้ตัวเลข "เดือนนี้" เพี้ยน จึงบอกด้วยว่าทิ้งเพราะอนาคต เพื่อให้รายงานได้
+ */
+export function parseContactDate(input: string | null): {
+  value: string | null;
+  rejectedAsFuture: boolean;
+} {
+  const value = parseThaiDate(input);
+  if (!value) return { value: null, rejectedAsFuture: false };
+
+  const limit = Date.now() + CONTACT_DATE_FUTURE_TOLERANCE_DAYS * 86_400_000;
+  if (Date.parse(value) > limit) return { value: null, rejectedAsFuture: true };
+
+  return { value, rejectedAsFuture: false };
+}
 
 /**
  * ช่องติดตามในชีทเดิมเป็นข้อความก้อนเดียว เช่น

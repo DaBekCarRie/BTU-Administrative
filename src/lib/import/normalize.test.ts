@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   cleanText,
@@ -8,6 +8,7 @@ import {
   normalizeProgram,
   normalizeStudyMode,
   parseCallDateField,
+  parseContactDate,
   parseFollowUp,
   parseThaiDate,
 } from "./normalize";
@@ -193,5 +194,58 @@ describe("วันที่ในอนาคตไกลเกินจริ�
 
   it("ช่องที่ปฏิเสธไปจะถูกรายงานว่าอ่านไม่ออก", () => {
     expect(parseCallDateField("23/01/2601").kind).toBe("unknown");
+  });
+});
+
+describe("วันติดต่อเข้ามาที่ยังมาไม่ถึง", () => {
+  /**
+   * เจอจริง: 26 แถวมีวันติดต่อเข้ามาอยู่หลังวันนำเข้า ไกลสุดเกือบสามเดือน
+   * รอดด่านหนึ่งปีมาได้ แล้วไปทำให้ตัวเลข "เดือนนี้" เพี้ยน
+   * คนติดต่อเข้ามาในวันที่ยังไม่มาถึงไม่ได้ ต่างจากวันนัดโทรที่ต้องเป็นอนาคต
+   */
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-12T03:00:00.000Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("วันที่ในอดีตผ่าน", () => {
+    expect(parseContactDate("15/03/2025")).toEqual({
+      value: "2025-03-15T05:00:00.000Z",
+      rejectedAsFuture: false,
+    });
+  });
+
+  it("อนาคตไม่เกิน 30 วันยังผ่าน เผื่อเครื่องที่กรอกตั้งวันผิดเล็กน้อย", () => {
+    expect(parseContactDate("11/10/2026").rejectedAsFuture).toBe(false);
+    expect(parseContactDate("11/10/2026").value).not.toBeNull();
+  });
+
+  it("เลยวันนี้เกิน 30 วันถือว่าพิมพ์ผิด ทิ้งค่าวันที่และบอกว่าถูกทิ้งเพราะอะไร", () => {
+    expect(parseContactDate("02/12/2026")).toEqual({
+      value: null,
+      rejectedAsFuture: true,
+    });
+    expect(parseContactDate("2569-12-02")).toEqual({
+      value: null,
+      rejectedAsFuture: true,
+    });
+  });
+
+  it("ช่องว่างหรืออ่านไม่ออก ไม่นับว่าถูกทิ้งเพราะอนาคต", () => {
+    expect(parseContactDate("")).toEqual({ value: null, rejectedAsFuture: false });
+    expect(parseContactDate("ไม่ทราบ")).toEqual({
+      value: null,
+      rejectedAsFuture: false,
+    });
+  });
+
+  it("วันนัดโทรในอนาคตไม่โดนด่านนี้", () => {
+    expect(parseCallDateField("02-Dec-2026")).toEqual({
+      kind: "date",
+      value: "2026-12-02T05:00:00.000Z",
+    });
   });
 });
