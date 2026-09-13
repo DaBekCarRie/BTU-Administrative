@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { listPeopleForExport } from "@/lib/data/people";
+import { currentStaffId } from "@/lib/data/staff";
 import { parseFilters } from "@/lib/data/people-filters";
 import { formatThaiDate } from "@/lib/date";
 import { formatPhone } from "@/lib/phone";
@@ -29,6 +30,12 @@ function cell(value: string | null): string {
  * เป็น CSV ที่มี BOM เพื่อให้ Excel อ่านภาษาไทยถูก
  */
 export async function GET(request: NextRequest) {
+  // route handler ไม่วิ่งผ่าน layout จึงไม่ได้ด่านเจ้าหน้าที่ที่หน้าจออื่นมี ต้องตรวจเอง
+  // RLS กันข้อมูลไว้แล้ว แต่ถ้าไม่ตรวจ คนนอกจะได้ไฟล์ว่างที่ดูเหมือนสำเร็จ แทนที่จะรู้ว่าไม่มีสิทธิ์
+  if (!(await currentStaffId())) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ส่งออกข้อมูล" }, { status: 403 });
+  }
+
   const filters = parseFilters(
     Object.fromEntries(request.nextUrl.searchParams.entries()),
   );

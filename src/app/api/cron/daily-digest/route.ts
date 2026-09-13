@@ -9,7 +9,9 @@ import { serverEnv } from "@/lib/env";
 export async function GET(request: NextRequest) {
   const { cronSecret } = serverEnv();
 
-  if (cronSecret && request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  // ไม่ได้ตั้ง secret = ปิดไว้ก่อน ไม่ใช่เปิดให้ทุกคน — วันที่ route นี้เริ่มสรุปข้อมูลจริง
+  // ถ้ายังเปิดอยู่ ข้อมูลจะหลุดทันทีโดยไม่มีใครสังเกต
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
