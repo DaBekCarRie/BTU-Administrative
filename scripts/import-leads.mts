@@ -26,6 +26,7 @@ import {
   parseFollowUp,
 } from "../src/lib/import/normalize";
 import { parseCsv } from "../src/lib/import/csv";
+import { HEADER_ROWS, LEGACY_COL } from "../src/lib/import/legacy-sheet";
 
 loadEnv({ path: ".env.local", quiet: true });
 
@@ -41,23 +42,7 @@ if (!filePath) {
   process.exit(1);
 }
 
-const COL = {
-  contactedAt: 1,
-  name: 2,
-  line: 3,
-  facebook: 4,
-  normal: 5,
-  supplementary: 6,
-  distance: 7,
-  faculty: 9,
-  program: 10,
-  priorEducation: 11,
-  phone: 14,
-  callDate: 15,
-  note: 17,
-  owner: 18,
-  followUps: [19, 20, 21, 22, 23, 24],
-} as const;
+const COL = LEGACY_COL;
 
 type Problem = { row: number; name: string; what: string };
 
@@ -95,7 +80,7 @@ async function main() {
   const staffByName = new Map((staff ?? []).map((s) => [s.display_name, s.id]));
 
   const rows = parseCsv(readFileSync(filePath!, "utf8"));
-  const dataRows = rows.slice(2).filter((r) => r.some((c) => c.trim() !== ""));
+  const dataRows = rows.slice(HEADER_ROWS).filter((r) => r.some((c) => c.trim() !== ""));
 
   const problems: Problem[] = [];
   const unknownFaculties = new Map<string, number>();

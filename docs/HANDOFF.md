@@ -106,4 +106,4 @@
 
 `.env.local` (มี URL · anon key · service role key · อีเมลและรหัสผ่านบัญชีทดสอบ —
 **ค่าไม่ได้บันทึกที่นี่**) · `.claude/skills/` และ `.agents/skills/` · `supabase/.temp/` ·
-`e2e/.auth/` · `node_modules/`
+`e2e/.auth/` · `node_modules/` · `scripts/*.local.json` (ชื่อเจ้าหน้าที่จริงสำหรับตัวสร้างไฟล์สมมติ)

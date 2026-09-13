@@ -199,6 +199,8 @@ export function parseCallDateField(input: string | null): CallDateField {
   return { kind: "unknown", raw };
 }
 
+const DAY_MS = 86_400_000;
+
 const MONTHS: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
@@ -221,7 +223,7 @@ export function parseThaiDate(input: string | null): string | null {
 
     // วันที่ในอนาคตไกล ๆ มาจากปี พ.ศ. ที่พิมพ์ผิดในชีท เช่น 2601 กลายเป็น ค.ศ. 2058
     // ต้องปฏิเสธและให้ไปอยู่ในรายงาน ไม่ใช่รับเข้ามาแล้วทำให้การเรียงลำดับพัง
-    const oneYearAhead = Date.now() + 400 * 86_400_000;
+    const oneYearAhead = Date.now() + 400 * DAY_MS;
     if (date.getTime() > oneYearAhead) return null;
 
     return date.toISOString();
@@ -257,7 +259,7 @@ export function parseContactDate(input: string | null): {
   const value = parseThaiDate(input);
   if (!value) return { value: null, rejectedAsFuture: false };
 
-  const limit = Date.now() + CONTACT_DATE_FUTURE_TOLERANCE_DAYS * 86_400_000;
+  const limit = Date.now() + CONTACT_DATE_FUTURE_TOLERANCE_DAYS * DAY_MS;
   if (Date.parse(value) > limit) return { value: null, rejectedAsFuture: true };
 
   return { value, rejectedAsFuture: false };

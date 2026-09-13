@@ -54,3 +54,6 @@ e2e/.auth/
 
 # Supabase CLI cache
 supabase/.temp/
+
+# ตารางชื่อเจ้าหน้าที่จริง → ชื่อสมมติ ของ scripts/mock-leads-csv.mts
+scripts/*.local.json

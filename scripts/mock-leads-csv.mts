@@ -23,10 +23,11 @@
  * ไม่ผ่านข้อใดข้อหนึ่งจะไม่เขียนไฟล์และออกด้วย exit code 1
  */
 import { createHmac, randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { parseCsv, toCsv } from "../src/lib/import/csv";
+import { HEADER_ROWS, LEGACY_COL } from "../src/lib/import/legacy-sheet";
 import {
   cleanText,
   collapseThaiDuplicates,
@@ -48,19 +49,11 @@ if (!inPath) {
   process.exit(1);
 }
 
-/** ตรงกับสคริปต์นำเข้า — แถวข้อมูลเริ่มหลังหัวตารางสองแถว */
-const HEADER_ROWS = 2;
 const COL = {
-  name: 2,
-  phone: 14,
-  callDate: 15,
-  callTime: 16,
-  note: 17,
-  owner: 18,
-  followUps: [19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
+  ...LEGACY_COL,
+  allFollowUps: [...LEGACY_COL.followUps, ...LEGACY_COL.extraFollowUps],
 } as const;
-const IMPORTED_FOLLOW_UPS = [19, 20, 21, 22, 23, 24];
-const FREE_TEXT = [COL.callTime, COL.note, ...COL.followUps];
+const FREE_TEXT = [COL.callTime, COL.note, ...COL.allFollowUps];
 const TOUCHED = new Set<number>([COL.name, COL.phone, COL.owner, ...FREE_TEXT]);
 
 const source = parseCsv(readFileSync(inPath, "utf8"));
@@ -117,6 +110,8 @@ const THAI_RUN = /[ก-๛]+/g;
 const LATIN_RUN = /[A-Za-z]+/g;
 /** ชื่อ Facebook มีอักษรจีน ญี่ปุ่น ฯลฯ ด้วย — ตัวอักษรที่ไม่ใช่ไทยหรือละติน */
 const OTHER_LETTER_RUN = /[^\P{L}ก-๛A-Za-z]+/gu;
+/** มีตัวอักษรภาษาใดก็ได้ — \p{L} ครอบไทยและละตินอยู่แล้ว */
+const HAS_LETTER = /\p{L}/u;
 const EMOJI_RUN = /\p{Extended_Pictographic}[\p{Extended_Pictographic}\u200d\ufe0f\u{1F3FB}-\u{1F3FF}]*/gu;
 const EMOJI = ["🌸", "🌼", "🍊", "🍋", "🌙", "⭐", "🐱", "🐶", "🦋", "🍓", "🌈", "☕", "🎵", "🍉", "🌿", "🐼"];
 
@@ -126,10 +121,10 @@ const EMOJI = ["🌸", "🌼", "🍊", "🍋", "🌙", "⭐", "🐱", "🐶", "�
  */
 const realTokens = new Set(
   source
-    .slice(2)
+    .slice(HEADER_ROWS)
     .flatMap((row) => [
-      ...((row[2] ?? "").match(THAI_RUN) ?? []).map(collapseThaiDuplicates),
-      ...((row[2] ?? "").match(LATIN_RUN) ?? []).map((t) => t.toLowerCase()),
+      ...((row[COL.name] ?? "").match(THAI_RUN) ?? []).map(collapseThaiDuplicates),
+      ...((row[COL.name] ?? "").match(LATIN_RUN) ?? []).map((t) => t.toLowerCase()),
     ]),
 );
 
@@ -252,39 +247,41 @@ const PHONE_WITHOUT_ZERO = /(?<!\d)[689]\d{8}(?!\d)/g;
 
 // ─── เจ้าหน้าที่ ───────────────────────────────────────────────────────────
 
-/** ชื่อเจ้าหน้าที่หลังยุบวรรณยุกต์ → ชื่อสมมติ ต้องตรงกับที่ใบ 04 จะใส่ในฐานข้อมูล */
-const STAFF_MOCK: Record<string, string> = {
-  พรทิวา: "มะลิ",
-  ข้าวโอ๊ต: "ต้นกล้า",
-  โอ๊ต: "กล้า",
-  หญิง: "น้ำฝน",
-  ฝ้าย: "ปุ้ย",
-  ครูพร: "ครูสมศรี",
-  พี่ขนมตาล: "พี่ส้มโอ",
+/**
+ * ตารางชื่อเจ้าหน้าที่จริง → ชื่อสมมติ อยู่ในไฟล์ local ที่ไม่เข้า git
+ * เพราะตัวสร้างต้องรู้ชื่อจริงถึงจะหาเจอ ถ้าเขียนไว้ในไฟล์นี้ ชื่อจริงจะเข้า git ไปกับโค้ด
+ * รูปแบบดูที่ scripts/mock-staff.example.json
+ */
+const STAFF_MAP_PATH = "scripts/mock-staff.local.json";
+type StaffMap = {
+  /** ค่าในช่องผู้ดูแลหลังยุบวรรณยุกต์ → ชื่อสมมติ */
+  owners: Record<string, string>;
+  /**
+   * ชื่อที่ฝังในช่องข้อความอิสระ — ชื่อสั้นที่บังเอิญเป็นคำทั่วไปด้วย
+   * ให้ตั้ง onlyBeforeCall เพื่อแทนเฉพาะรูปที่ตามด้วย "โทร"
+   */
+  freeText: { real: string; mock: string; onlyBeforeCall?: boolean }[];
 };
+if (!existsSync(STAFF_MAP_PATH)) {
+  console.error(`ไม่พบ ${STAFF_MAP_PATH} — สร้างจาก scripts/mock-staff.example.json แล้วใส่ชื่อจริงลงไป`);
+  process.exit(1);
+}
+const staffMap = JSON.parse(readFileSync(STAFF_MAP_PATH, "utf8")) as StaffMap;
 
 /** ยอมให้สระบนล่างและวรรณยุกต์แต่ละตัวในชื่อซ้ำกี่ครั้งก็ได้ */
 const loosePattern = (word: string) =>
   [...word].map((c) => (MARK.test(c) ? `${c}+` : c)).join("");
+const BEFORE_CALL = "(?=\\s*\\.?\\s*โทร)";
 
-/**
- * ในช่องข้อความอิสระ ชื่อสั้นอย่าง "หญิง" "ข้าว" เป็นคำทั่วไปด้วย ("ผู้หญิง")
- * จึงแทนเฉพาะรูปที่เป็นชื่อแน่ ๆ คือตามด้วย "โทร" ส่วนชื่อที่ยาวและเฉพาะตัวแทนทุกที่
- */
-const FREE_TEXT_STAFF: [RegExp, string][] = [
-  [new RegExp(loosePattern("ข้าวโอ๊ต"), "g"), "ต้นกล้า"],
-  [new RegExp(loosePattern("พรทิวา"), "g"), "มะลิ"],
-  [new RegExp(loosePattern("ครูพร"), "g"), "ครูสมศรี"],
-  [new RegExp(loosePattern("ขนมตาล"), "g"), "ส้มโอ"],
-  [new RegExp(loosePattern("พี่มด"), "g"), "พี่ต่าย"],
-  [new RegExp(`${loosePattern("ฝ้าย")}(?=\\s*\\.?\\s*โทร)`, "g"), "ปุ้ย"],
-  [new RegExp(`${loosePattern("หญิง")}(?=\\s*\\.?\\s*โทร)`, "g"), "น้ำฝน"],
-  [new RegExp(`${loosePattern("โอ๊ต")}(?=\\s*\\.?\\s*โทร)`, "g"), "กล้า"],
-  [new RegExp(`${loosePattern("ข้าว")}(?=\\s*\\.?\\s*โทร)`, "g"), "ต้น"],
-];
+const FREE_TEXT_STAFF: [RegExp, string][] = staffMap.freeText.map(({ real, mock, onlyBeforeCall }) => [
+  new RegExp(loosePattern(real) + (onlyBeforeCall ? BEFORE_CALL : ""), "g"),
+  mock,
+]);
 
-/** ผู้โทรที่ขึ้นต้นช่องติดตาม หลังแทนชื่อเจ้าหน้าที่เป็นชื่อสมมติแล้ว */
-const MOCK_STAFF_NAMES = ["ต้นกล้า", "มะลิ", "ครูสมศรี", "พี่ส้มโอ", "พี่ต่าย", "น้ำฝน", "กล้า", "ปุ้ย", "ต้น"];
+/** ผู้โทรที่ขึ้นต้นช่องติดตาม หลังแทนแล้ว — ยาวก่อนสั้น ไม่งั้น "ต้น" จะกินหัว "ต้นกล้า" */
+const MOCK_STAFF_NAMES = [
+  ...new Set([...Object.values(staffMap.owners), ...staffMap.freeText.map((e) => e.mock)]),
+].sort((a, b) => b.length - a.length);
 const STAFF_PREFIX = new RegExp(
   `^\\s*(?:${MOCK_STAFF_NAMES.map(loosePattern).join("|")})?\\s*โทร\\.?`,
 );
@@ -339,7 +336,7 @@ function rebuildNote(cell: string): string {
 
 function rebuildFollowUp(original: string, scrubbed: string): string {
   // ช่องที่ไม่มีตัวอักษรเลย เช่น "/" หรือวันที่เปล่า ๆ ไม่มีอะไรให้ระบุตัวคน คงรูปเดิมไว้
-  if (!/[ก-๛A-Za-z\p{L}]/u.test(original)) return scrubbed;
+  if (!HAS_LETTER.test(original)) return scrubbed;
 
   const parsed = parseFollowUp(original)!;
   const parts: string[] = [];
@@ -361,8 +358,8 @@ function rebuildFollowUp(original: string, scrubbed: string): string {
 function mockOwner(raw: string): string {
   const key = cleanText(raw);
   if (!key) return raw;
-  const mock = STAFF_MOCK[key];
-  if (!mock) throw new Error(`ชื่อผู้ดูแลที่ไม่รู้จัก ต้องเพิ่มใน STAFF_MOCK ก่อน (${key.length} ตัวอักษร)`);
+  const mock = staffMap.owners[key];
+  if (!mock) throw new Error(`ชื่อผู้ดูแลที่ไม่รู้จัก ต้องเพิ่มใน ${STAFF_MAP_PATH} ก่อน (${key.length} ตัวอักษร)`);
   const [, lead, core, trail] = raw.match(/^(\s*)([\s\S]*?)(\s*)$/)!;
   return lead + injectRepeats(core, mock) + trail;
 }
@@ -404,7 +401,7 @@ const output = source.map((row, index) => {
     if (col === COL.phone) return mockPhoneDigits(cell);
     if (col === COL.owner) return mockOwner(cell);
     if (col === COL.note) return rebuildNote(cell);
-    if ((COL.followUps as readonly number[]).includes(col)) {
+    if ((COL.allFollowUps as readonly number[]).includes(col)) {
       return rebuildFollowUp(cell, scrubFreeText(cell, ownNameRuns));
     }
     if (col === COL.callTime) return scrubFreeText(cell, ownNameRuns);
@@ -485,7 +482,7 @@ check(
 );
 check(
   realRows.every((row, i) =>
-    IMPORTED_FOLLOW_UPS.every((col) => {
+    COL.followUps.every((col) => {
       const a = parseFollowUp(row[col] ?? null);
       const b = parseFollowUp(mockRows[i][col] ?? null);
       return a?.outcome === b?.outcome && a?.occurredAt === b?.occurredAt;
@@ -538,13 +535,12 @@ const realPhones = new Set(
 const leakedPhones = [...realPhones].filter((p) => mockDigits.includes(p.slice(1))).length;
 check(leakedPhones === 0, `ไม่มีเบอร์จริงหลงอยู่ในไฟล์ (ตรวจ ${realPhones.size} เบอร์ · หลุด ${leakedPhones})`);
 
-const staffLeaks = ["พรทิวา", "ข้าวโอ๊ต", "ครูพร", "ขนมตาล", "พี่มด"].filter((n) =>
-  mockText.includes(n),
+const staffLeaks = staffMap.freeText.filter(({ real, onlyBeforeCall }) =>
+  new RegExp(collapseThaiDuplicates(real) + (onlyBeforeCall ? BEFORE_CALL : "")).test(mockText),
 );
-const shortStaffLeaks = /(ฝ้าย|หญิง|โอ๊ต|ข้าว)\s*\.?\s*โทร/.test(mockText);
-const ownerLeaks = mockRows.some((r) => Object.keys(STAFF_MOCK).includes(cleanText(r[COL.owner])));
+const ownerLeaks = mockRows.some((r) => cleanText(r[COL.owner]) in staffMap.owners);
 check(
-  staffLeaks.length === 0 && !shortStaffLeaks && !ownerLeaks,
+  staffLeaks.length === 0 && !ownerLeaks,
   "ไม่มีชื่อเจ้าหน้าที่จริงหลงอยู่ในไฟล์",
 );
 
@@ -566,8 +562,8 @@ const strayNotes = mockRows.filter((r) => (r[COL.note] ?? "").trim() && !notePoo
 check(strayNotes === 0, `หมายเหตุทุกช่องมาจากชุดข้อความสมมติ (นอกชุด ${strayNotes})`);
 
 const strayFollowUps = mockRows.flatMap((r) =>
-  COL.followUps.map((col) => r[col] ?? "").filter(
-    (cell) => /[ก-๛A-Za-z\p{L}]/u.test(cell) && !generatedFollowUp.test(cell),
+  COL.allFollowUps.map((col) => r[col] ?? "").filter(
+    (cell) => HAS_LETTER.test(cell) && !generatedFollowUp.test(cell),
   ),
 ).length;
 check(strayFollowUps === 0, `ช่องติดตามทุกช่องที่มีตัวอักษรเป็นรูปที่สคริปต์สร้างเอง (นอกรูป ${strayFollowUps})`);
@@ -582,7 +578,7 @@ const strayCallTimes = mockRows.filter(
 check(strayCallTimes === 0, `ช่องช่วงเวลาให้ติดต่อไม่มีตัวอักษรละตินหรือเลขยาวที่ไม่ได้แทน (พบ ${strayCallTimes})`);
 
 const strayNumbers = mockRows.flatMap((r) =>
-  COL.followUps.map((col) => r[col] ?? "").filter((cell) => !/[ก-๛A-Za-z\p{L}]/u.test(cell) && hasUnmockedLongNumber(cell.replace(/\d{1,2}[/-]\d{1,2}[/-]\d{4}/g, ""))),
+  COL.allFollowUps.map((col) => r[col] ?? "").filter((cell) => !HAS_LETTER.test(cell) && hasUnmockedLongNumber(cell.replace(/\d{1,2}[/-]\d{1,2}[/-]\d{4}/g, ""))),
 ).length;
 check(strayNumbers === 0, `ช่องติดตามที่ไม่มีตัวอักษรไม่มีเลขยาวที่ไม่ได้แทน (พบ ${strayNumbers})`);
 
