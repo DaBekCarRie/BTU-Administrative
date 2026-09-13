@@ -15,7 +15,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (user && (await currentStaffId())) redirect("/queue");
 
   const { next, error } = await searchParams;
+  // ถึงบรรทัดนี้ได้แปลว่าไม่ใช่เจ้าหน้าที่ — ถ้ายังมี session ก็คือล็อกอินได้แต่ไม่มีสิทธิ์
   const signedInWithoutAccess = !!user;
+  const urlError = typeof error === "string" ? error : signedInWithoutAccess ? "no-staff" : undefined;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 p-6">
@@ -27,7 +29,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       </div>
       <LoginForm
         next={typeof next === "string" ? next : undefined}
-        urlError={signedInWithoutAccess ? "no-staff" : typeof error === "string" ? error : undefined}
+        urlError={urlError}
       />
       {signedInWithoutAccess ? (
         <form action="/auth/signout" method="post" data-testid="no-access">

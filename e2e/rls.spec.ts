@@ -136,6 +136,7 @@ test.describe("RLS — ล็อกอินแล้วแต่ไม่ใช
       outsider.rpc("read_national_id", { p_person_id: nobody }),
       outsider.rpc("set_national_id", { p_person_id: nobody, p_national_id: "1234567890123" }),
       outsider.rpc("merge_people", { p_survivor_id: nobody, p_merged_id: nobody, p_details: {} }),
+      outsider.rpc("rebuild_person_state", { p_person_id: nobody, p_state: { fullName: "probe" } }),
     ]);
     for (const { error } of writes) expect(error).not.toBeNull();
   });
@@ -148,6 +149,16 @@ test.describe("RLS — ล็อกอินแล้วแต่ไม่ใช
       .rpc("application_funnel", { p_from: "2000-01-01T00:00:00Z", p_to: "2100-01-01T00:00:00Z" })
       .single();
     expect(Object.values(funnel ?? {}).every((n) => Number(n) === 0)).toBe(true);
+
+    const { data: board } = await outsider
+      .rpc("work_board_counts", {
+        p_stale_days: 0,
+        p_awaiting_days: 0,
+        p_doc_types: 4,
+        p_closed_statuses: [],
+      })
+      .single();
+    expect(Object.values(board ?? {}).every((n) => Number(n) === 0)).toBe(true);
   });
 
   test("bucket ทั้งสองเปิดรายการไฟล์ไม่ได้", async () => {

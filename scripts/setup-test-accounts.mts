@@ -35,6 +35,9 @@ const admin = createClient<Database>(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+/** ชื่อแถวเจ้าหน้าที่ของบัญชีทดสอบขึ้นต้นด้วยคำนี้เสมอ — ใช้แยกจากเจ้าหน้าที่ตัวจริง */
+const TEST_NAME_PREFIX = "ผู้ใช้ทดสอบ E2E";
+
 type Identity = {
   label: string;
   emailVar: string;
@@ -113,10 +116,17 @@ async function ensureAccount(identity: Identity): Promise<void> {
 
   const { data: linked, error: readError } = await admin
     .from("staff")
-    .select("id, role, is_active")
+    .select("id, role, is_active, display_name")
     .eq("auth_user_id", user.id)
     .maybeSingle();
   if (readError) throw new Error(`อ่านแถวเจ้าหน้าที่ไม่สำเร็จ: ${readError.message}`);
+
+  // อีเมลในตัวแปรผูกกับเจ้าหน้าที่ตัวจริง — น่าจะตั้งค่าผิด ห้ามเปลี่ยน role หรือตัดสิทธิ์คนจริงเงียบ ๆ
+  if (linked && !linked.display_name.startsWith(TEST_NAME_PREFIX)) {
+    throw new Error(
+      `${identity.emailVar} ผูกกับเจ้าหน้าที่ที่ไม่ใช่บัญชีทดสอบ — ตรวจค่าใน .env.local ก่อน ไม่ได้แตะแถวเจ้าหน้าที่`,
+    );
+  }
 
   if (!identity.staff) {
     if (linked) {

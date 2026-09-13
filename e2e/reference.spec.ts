@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 
 import { uniqueName } from "./helpers";
 import { hasCredentials, signedInClient, STORAGE } from "./identities";
@@ -138,31 +137,29 @@ test.describe("เอกสารอ้างอิง", () => {
   });
 
   test("หัวหน้าทีมลบได้หลังยืนยัน และไฟล์ใน storage ถูกลบด้วย ไม่เหลือไฟล์กำพร้า", async ({ page }) => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const email = process.env.E2E_EMAIL;
-    const password = process.env.E2E_PASSWORD;
-    test.skip(!url || !anonKey || !email || !password, "ต้องมีค่าเชื่อมต่อและบัญชีทดสอบใน .env.local");
+    test.skip(!hasCredentials("lead"), "ต้องมีบัญชีทดสอบใน .env.local");
 
     const title = uniqueName("ลบทิ้ง");
     const item = await addReference(page, { title, category: "อื่นๆ", files: [PNG, PDF] });
     await expect(item.getByTestId("reference-file")).toHaveCount(2);
     const id = await item.getAttribute("data-reference-id");
 
-    const client = createClient(url!, anonKey!, { auth: { persistSession: false } });
-    const { error: signInError } = await client.auth.signInWithPassword({ email: email!, password: password! });
-    expect(signInError).toBeNull();
+    const client = await signedInClient("lead");
     const before = await client.storage.from("reference").list(id!);
     expect(before.data?.length).toBe(2);
 
-    // บัญชีทดสอบตั้งต้นเป็นหัวหน้าทีม — กรณีเจ้าหน้าที่ลบไม่ได้รอบัญชีจากใบ 01
+    // session ตั้งต้นเป็นหัวหน้าทีม — กรณีเจ้าหน้าที่ลบไม่ได้อยู่ในกลุ่มเจ้าหน้าที่ข้างล่าง
     await item.getByTestId("delete-reference").click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("กู้คืนไม่ได้");
     await expect(dialog).toContainText("2 ไฟล์");
     await dialog.getByTestId("confirm-delete-reference").click();
     // ลบไฟล์ใน storage + ลบแถว + โหลดรายการใหม่ ช้ากว่า 5 วินาทีได้ตอนรันขนาน
-    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    // dialog ค้างเปิดได้สองแบบ: ช้า หรือ action คืน error — พิมพ์ toast ไว้ให้แยกออกได้ทันทีเมื่อพัง
+    await expect(dialog).toBeHidden({ timeout: 20_000 }).catch(async (cause) => {
+      console.log("toast ตอน dialog ไม่ปิด:", await page.locator("[data-sonner-toast]").allInnerTexts());
+      throw cause;
+    });
     await expect(page.getByTestId("reference-item").filter({ hasText: title })).toHaveCount(0, {
       timeout: 20_000,
     });
@@ -183,19 +180,35 @@ test.describe("เอกสารอ้างอิง", () => {
       await expect(item.getByTestId("delete-reference")).toHaveCount(0);
     });
 
-    test("เรียกลบตรงที่ฐานข้อมูลก็ถูกปฏิเสธ รายการยังอยู่", async ({ page }) => {
+    test("เรียกลบตรงที่ฐานข้อมูลก็ถูกปฏิเสธครบสามที่ รายการ ไฟล์ และตัวไฟล์ใน bucket", async ({ page }) => {
       const title = uniqueName("ลบตรงไม่ได้");
-      const item = await addReference(page, { title, category: "ประกาศ", files: [] });
+      const item = await addReference(page, { title, category: "ประกาศ", files: [PNG] });
+      await expect(item.getByTestId("reference-file")).toHaveCount(1, { timeout: 20_000 });
       const id = await item.getAttribute("data-reference-id");
 
       const staff = await signedInClient("staff");
-      const { data: deleted, error } = await staff.from("reference_documents").delete().eq("id", id!).select("id");
-      // RLS ไม่ error แต่กรองจนไม่มีแถวให้ลบ
-      expect(error ?? null).toBeNull();
-      expect(deleted).toEqual([]);
+      const { data: files } = await staff
+        .from("reference_document_files")
+        .select("id, storage_path")
+        .eq("reference_document_id", id!);
+      expect(files).toHaveLength(1);
 
-      const { data: still } = await staff.from("reference_documents").select("id").eq("id", id!);
-      expect(still).toHaveLength(1);
+      // RLS ไม่ error แต่กรองจนไม่มีแถวให้ลบ — storage ก็เช่นกัน คืนรายการว่าง
+      const { data: deletedDoc } = await staff.from("reference_documents").delete().eq("id", id!).select("id");
+      expect(deletedDoc).toEqual([]);
+      const { data: deletedFile } = await staff
+        .from("reference_document_files")
+        .delete()
+        .eq("id", files![0].id)
+        .select("id");
+      expect(deletedFile).toEqual([]);
+      const { data: removed } = await staff.storage.from("reference").remove([files![0].storage_path]);
+      expect(removed ?? []).toEqual([]);
+
+      const { data: stillDoc } = await staff.from("reference_documents").select("id").eq("id", id!);
+      expect(stillDoc).toHaveLength(1);
+      const { data: stillObject } = await staff.storage.from("reference").list(id!);
+      expect(stillObject).toHaveLength(1);
     });
   });
 
