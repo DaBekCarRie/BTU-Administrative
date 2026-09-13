@@ -33,6 +33,7 @@ export function DocumentChecklistPanel({
 
   async function upload(docType: DocType, file: File) {
     setBusy(docType);
+    let refreshing = false;
     try {
       const prepared = await prepareUpload(file);
 
@@ -62,9 +63,14 @@ export function DocumentChecklistPanel({
           ? `อัปโหลด ${docType} แล้ว (ย่อขนาดลง ${saved}%)`
           : `อัปโหลด ${docType} แล้ว`,
       );
-      router.refresh();
+      // ปลดสถานะกำลังอัปโหลดพร้อมข้อมูลใหม่ ไม่งั้นแถวเด้งกลับเป็น "ยังไม่ส่ง" ระหว่างรอ refresh
+      refreshing = true;
+      startTransition(() => {
+        router.refresh();
+        setBusy(null);
+      });
     } finally {
-      setBusy(null);
+      if (!refreshing) setBusy(null);
     }
   }
 

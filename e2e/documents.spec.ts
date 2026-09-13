@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
-import { uniqueName } from "./helpers";
+import { UPLOAD_DONE, uniqueName } from "./helpers";
 
 const FIXTURE = "e2e/fixtures/doc.png";
 
@@ -23,7 +23,7 @@ test.describe("เอกสารประจำตัว", () => {
 
     await page.getByTestId("file-รูปถ่าย").setInputFiles(FIXTURE);
     const photo = page.getByTestId("doc-รูปถ่าย");
-    await expect(photo).toContainText("ส่งแล้ว");
+    await expect(photo).toContainText("ส่งแล้ว", UPLOAD_DONE);
 
     // ส่งแล้วแต่ยังไม่ตรวจ ไม่นับว่าครบ
     await expect(page.getByTestId("doc-progress")).toHaveText("ผ่านแล้ว 0/4");
@@ -37,7 +37,7 @@ test.describe("เอกสารประจำตัว", () => {
     await createPerson(page, uniqueName("ไม่ผ่าน"));
 
     await page.getByTestId("file-วุฒิการศึกษา").setInputFiles(FIXTURE);
-    await expect(page.getByTestId("doc-วุฒิการศึกษา")).toContainText("ส่งแล้ว");
+    await expect(page.getByTestId("doc-วุฒิการศึกษา")).toContainText("ส่งแล้ว", UPLOAD_DONE);
 
     page.once("dialog", (dialog) => dialog.accept("ภาพเบลอ อ่านชื่อไม่ออก"));
     await page.getByTestId("reject-วุฒิการศึกษา").click();
@@ -54,7 +54,7 @@ test.describe("เอกสารประจำตัว", () => {
     await page.getByTestId("file-สำเนาบัตรประชาชน").setInputFiles(FIXTURE);
     const card = page.getByTestId("doc-สำเนาบัตรประชาชน");
 
-    await expect(card).toContainText("การเปิดดูจะถูกบันทึกไว้");
+    await expect(card).toContainText("การเปิดดูจะถูกบันทึกไว้", UPLOAD_DONE);
     await expect(card.getByRole("button", { name: "แสดงเอกสาร" })).toBeVisible();
 
     // รูปถ่ายไม่ใช่เอกสารอ่อนไหว จึงไม่มีข้อความนี้
@@ -70,7 +70,7 @@ test.describe("เอกสารประจำตัว", () => {
     const name = uniqueName("ค้างเอกสาร");
     await createPerson(page, name);
     await page.getByTestId("file-รูปถ่าย").setInputFiles(FIXTURE);
-    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว");
+    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว", UPLOAD_DONE);
 
     await page.goto("/documents");
     const row = page.getByTestId("incomplete-rows").locator("tr", { hasText: name });
@@ -84,7 +84,7 @@ test.describe("เอกสารประจำตัว", () => {
 
     // อัปโหลดรูปถ่าย
     await page.getByTestId("file-รูปถ่าย").setInputFiles(FIXTURE);
-    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว");
+    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว", UPLOAD_DONE);
 
     // เปิดหน้าโต๊ะตรวจเอกสาร
     await page.goto("/documents");
@@ -112,7 +112,7 @@ test.describe("เอกสารประจำตัว", () => {
 
     // อัปโหลดสำเนาบัตรประชาชน
     await page.getByTestId("file-สำเนาบัตรประชาชน").setInputFiles(FIXTURE);
-    await expect(page.getByTestId("doc-สำเนาบัตรประชาชน")).toContainText("ส่งแล้ว");
+    await expect(page.getByTestId("doc-สำเนาบัตรประชาชน")).toContainText("ส่งแล้ว", UPLOAD_DONE);
 
     await page.goto("/documents");
     const studentBtn = page.getByRole("button", { name: new RegExp(name) });

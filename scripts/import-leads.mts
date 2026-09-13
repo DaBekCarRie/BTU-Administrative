@@ -101,6 +101,13 @@ async function main() {
   let statusFromDateField = 0;
   let futureAppointments = 0;
   let futureContactDates = 0;
+  let lastContactedAt: string | null = null;
+  let contactDateFromPreviousRow = 0;
+  let contactDateFromFollowUp = 0;
+  let contactDateFromFirstRow = 0;
+  const firstContactDateInFile =
+    dataRows.map((row) => parseContactDate(row[COL.contactedAt]).value).find((value) => value !== null) ??
+    new Date().toISOString();
 
   for (const [index, row] of dataRows.entries()) {
     if (prepared.length >= limit) break;
@@ -121,7 +128,22 @@ async function main() {
         what: `วันติดต่อเข้ามาอยู่ในอนาคต (${cleanText(row[COL.contactedAt])}) — ทิ้งค่าวันที่`,
       });
     }
-    const contactedAt = contactDate.value ?? new Date().toISOString();
+    // วันที่ว่างหรือถูกทิ้ง: ใช้วันของแถวก่อนหน้า เพราะชีทกรอกต่อท้ายตามเวลา (ถอยหลังเกิน 7 วันแค่ 12 จาก 3,110 แถว)
+    // เดิมใช้เวลานำเข้า ทำให้แถวพวกนี้ไปกองในเดือนที่นำเข้าและทำให้กรวยของเดือนนั้นบวม
+    // แถวแรก ๆ ที่ยังไม่มีแถวก่อนหน้า ใช้วันติดตามที่เก่าสุดของแถวนั้น ไม่มีก็ใช้วันแรกที่มีในไฟล์
+    let contactedAt = contactDate.value;
+    if (contactedAt) {
+      lastContactedAt = contactedAt;
+    } else {
+      const earliestFollowUp = COL.followUps
+        .map((column) => parseFollowUp(row[column])?.occurredAt ?? null)
+        .filter((value): value is string => value !== null)
+        .sort()[0];
+      contactedAt = lastContactedAt ?? earliestFollowUp ?? firstContactDateInFile;
+      if (lastContactedAt) contactDateFromPreviousRow += 1;
+      else if (earliestFollowUp) contactDateFromFollowUp += 1;
+      else contactDateFromFirstRow += 1;
+    }
 
     const facultyName = normalizeFaculty(row[COL.faculty]);
     const rawFaculty = cleanText(row[COL.faculty]);
@@ -250,7 +272,10 @@ async function main() {
   console.log(`เหตุการณ์โทรตาม       ${followUpCount}`);
   console.log(`สถานะที่ดึงจากช่องวันที่ ${statusFromDateField}`);
   console.log(`นัดโทรที่ยังไม่ถึงกำหนด  ${futureAppointments}`);
-  console.log(`วันติดต่อเข้ามาในอนาคต  ${futureContactDates} (ทิ้งค่าวันที่ ใช้เวลานำเข้าแทน)`);
+  console.log(`วันติดต่อเข้ามาในอนาคต  ${futureContactDates} (ทิ้งค่าวันที่)`);
+  console.log(
+    `วันติดต่อที่ต้องเดา     แถวก่อนหน้า ${contactDateFromPreviousRow} · วันติดตาม ${contactDateFromFollowUp} · วันแรกในไฟล์ ${contactDateFromFirstRow}`,
+  );
   console.log(`ชื่อซ้ำ                ${duplicateNames.length} กลุ่ม (${duplicateNames.reduce((n, [, r]) => n + r.length - 1, 0)} แถวเกิน)`);
   console.log(`เบอร์ซ้ำ               ${duplicatePhones.length} กลุ่ม`);
 

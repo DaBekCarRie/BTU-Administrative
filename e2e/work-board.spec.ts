@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { signedInClient } from "./identities";
+
 test.describe("กระดานงานค้างและตัวเลขรวม", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/queue");
@@ -38,9 +40,14 @@ test.describe("กระดานงานค้างและตัวเล�
     const board = page.getByTestId("work-board");
     const text = await board.innerText();
 
-    // ชื่อเจ้าหน้าที่จริงต้องไม่โผล่บนกระดาน — ทีมตัดสินใจไม่ทำเรื่องวัดผลคน
-    for (const staffName of ["พรทิวา", "ข้าวโอ๊ต", "หญิง", "ฝ้าย", "ครูพร"]) {
-      expect(text).not.toContain(staffName);
+    // ชื่อเจ้าหน้าที่ต้องไม่โผล่บนกระดาน — ทีมตัดสินใจไม่ทำเรื่องวัดผลคน
+    // อ่านชื่อจากฐานข้อมูล ไม่เขียนชื่อคนจริงลงในเทสต์
+    const client = await signedInClient("lead");
+    const { data: staff, error } = await client.from("staff").select("display_name");
+    expect(error).toBeNull();
+    expect(staff?.length).toBeGreaterThan(0);
+    for (const { display_name } of staff ?? []) {
+      expect(text).not.toContain(display_name);
     }
   });
 

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { uniqueName } from "./helpers";
+import { UPLOAD_DONE, uniqueName } from "./helpers";
 
 const ID = "1234567890123";
 
@@ -81,10 +81,10 @@ test.describe("เลขบัตรประชาชนและร่อง�
     await createPerson(page, uniqueName("เบลอ"));
 
     await page.getByTestId("file-สำเนาบัตรประชาชน").setInputFiles("e2e/fixtures/doc.png");
-    await expect(page.getByTestId("blurred-สำเนาบัตรประชาชน")).toBeVisible();
+    await expect(page.getByTestId("blurred-สำเนาบัตรประชาชน")).toBeVisible(UPLOAD_DONE);
 
     await page.getByTestId("file-รูปถ่าย").setInputFiles("e2e/fixtures/doc.png");
-    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว");
+    await expect(page.getByTestId("doc-รูปถ่าย")).toContainText("ส่งแล้ว", UPLOAD_DONE);
     await expect(page.getByTestId("blurred-รูปถ่าย")).toHaveCount(0);
   });
 });

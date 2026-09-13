@@ -17,7 +17,7 @@ export type { CallOutcome, FollowUpStatus, PriorEducation, StudyMode };
 
 /**
  * ลบวรรณยุกต์และสระที่พิมพ์ซ้ำติดกัน
- * ต้นเหตุของ ฝ้าย / ฝ้้าย / ฝ้้้าย / ฝ้้้้าย ที่มองด้วยตาไม่เห็นความต่าง
+ * ต้นเหตุของ ปุ้ย / ปุ้้ย / ปุ้้้ย / ปุ้้้้ย ที่มองด้วยตาไม่เห็นความต่าง
  */
 export function collapseThaiDuplicates(input: string): string {
   // U+0E31, U+0E34-U+0E3A, U+0E47-U+0E4E คือสระบนล่างและวรรณยุกต์
@@ -244,13 +244,21 @@ export function parseThaiDate(input: string | null): string | null {
   return null;
 }
 
-/** เผื่อเครื่องที่กรอกตั้งวันผิดเล็กน้อย เกินนี้ถือว่าพิมพ์ผิดแน่นอน */
-const CONTACT_DATE_FUTURE_TOLERANCE_DAYS = 30;
+/** ไทยไม่มีเวลาออมแสง — UTC+7 ตลอดปี */
+const BANGKOK_OFFSET_MS = 7 * 3_600_000;
+
+function endOfTodayBangkokMs(): number {
+  const startOfDay = Math.floor((Date.now() + BANGKOK_OFFSET_MS) / DAY_MS) * DAY_MS - BANGKOK_OFFSET_MS;
+  return startOfDay + DAY_MS - 1;
+}
 
 /**
- * วันที่คนติดต่อเข้ามา — ต้องไม่อยู่ในอนาคต ต่างจากวันนัดโทรที่เป็นอนาคตโดยธรรมชาติ
+ * วันที่คนติดต่อเข้ามา — ต้องไม่เลยวันนี้ (เวลาไทย) ต่างจากวันนัดโทรที่เป็นอนาคตโดยธรรมชาติ
  * ด่านหนึ่งปีของ parseThaiDate กว้างเกินไปสำหรับช่องนี้: เคยมี 26 แถวรอดมาได้
  * แล้วไปทำให้ตัวเลข "เดือนนี้" เพี้ยน จึงบอกด้วยว่าทิ้งเพราะอนาคต เพื่อให้รายงานได้
+ *
+ * ไม่มีค่าเผื่อ: ด่านนี้ใช้กับชีทย้อนหลังเท่านั้น วันในอนาคตแม้วันเดียวก็เป็นไปไม่ได้
+ * (เดิมเผื่อ 30 วัน แต่ปล่อย 9 แถวผ่าน ขัดกับใบ 04 — หัวหน้าทีมให้ตัดสินแทน 13 ก.ย. 2569)
  */
 export function parseContactDate(input: string | null): {
   value: string | null;
@@ -259,15 +267,14 @@ export function parseContactDate(input: string | null): {
   const value = parseThaiDate(input);
   if (!value) return { value: null, rejectedAsFuture: false };
 
-  const limit = Date.now() + CONTACT_DATE_FUTURE_TOLERANCE_DAYS * DAY_MS;
-  if (Date.parse(value) > limit) return { value: null, rejectedAsFuture: true };
+  if (Date.parse(value) > endOfTodayBangkokMs()) return { value: null, rejectedAsFuture: true };
 
   return { value, rejectedAsFuture: false };
 }
 
 /**
  * ช่องติดตามในชีทเดิมเป็นข้อความก้อนเดียว เช่น
- * "ฝ้ายโทร 25/03/2025 สนใจสมัคร" — ต้องแยกวันที่ ผลลัพธ์ และบันทึกย่อออกจากกัน
+ * "ปุ้ยโทร 25/03/2025 สนใจสมัคร" — ต้องแยกวันที่ ผลลัพธ์ และบันทึกย่อออกจากกัน
  */
 export function parseFollowUp(
   input: string | null,

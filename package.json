@@ -16,9 +16,12 @@
     "test:watch": "vitest",
     "db:rebuild": "tsx scripts/rebuild-people.mts",
     "db:verify": "tsx scripts/rebuild-people.mts --check",
+    "db:backup": "tsx scripts/backup-data.mts",
+    "db:reset-to-mock": "tsx scripts/reset-to-mock.mts",
     "import:leads": "tsx scripts/import-leads.mts",
     "mock:leads": "tsx scripts/mock-leads-csv.mts",
-    "e2e:accounts": "tsx scripts/setup-test-accounts.mts"
+    "e2e:accounts": "tsx scripts/setup-test-accounts.mts",
+    "accounts:lead": "tsx scripts/setup-lead-account.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

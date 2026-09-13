@@ -16,23 +16,23 @@ import {
 describe("วรรณยุกต์ซ้ำ", () => {
   /** เคสจริง: ชื่อเจ้าหน้าที่ 5 คนกลายเป็น 16 ค่าเพราะวรรณยุกต์ซ้ำที่มองด้วยตาไม่เห็น */
   it.each([
-    ["ฝ้้าย", "ฝ้าย"],
-    ["ฝ้้้าย", "ฝ้าย"],
-    ["ฝ้้้้้้าย", "ฝ้าย"],
-    ["ข้้าวโอ๊ต", "ข้าวโอ๊ต"],
-    ["พรทิิวา", "พรทิวา"],
-    ["หญิิง", "หญิง"],
+    ["ปุ้้ย", "ปุ้ย"],
+    ["ปุ้้้ย", "ปุ้ย"],
+    ["ปุ้้้้้้ย", "ปุ้ย"],
+    ["ต้้นกล้า", "ต้นกล้า"],
+    ["มะลิิ", "มะลิ"],
+    ["น้้ำฝน", "น้ำฝน"],
   ])("%s → %s", (input, expected) => {
     expect(collapseThaiDuplicates(input)).toBe(expected);
   });
 
   it("ไม่แตะคำที่สะกดถูกอยู่แล้ว", () => {
-    expect(collapseThaiDuplicates("ฝ้าย")).toBe("ฝ้าย");
+    expect(collapseThaiDuplicates("ปุ้ย")).toBe("ปุ้ย");
     expect(collapseThaiDuplicates("รัฐประศาสนศาสตร์")).toBe("รัฐประศาสนศาสตร์");
   });
 
   it("cleanText ตัดช่องว่างเกินด้วย", () => {
-    expect(cleanText("  ข้้าวโอ๊ต   ")).toBe("ข้าวโอ๊ต");
+    expect(cleanText("  ต้้นกล้า   ")).toBe("ต้นกล้า");
     expect(cleanText(null)).toBe("");
   });
 });
@@ -149,7 +149,7 @@ describe("แปลงวันที่หลายรูปแบบ", () => {
 
 describe("แยกช่องติดตามเป็นเหตุการณ์", () => {
   it("ดึงวันที่และผลลัพธ์ออกจากข้อความก้อนเดียว", () => {
-    const result = parseFollowUp("ฝ้ายโทร 25/03/2025 สนใจสมัคร");
+    const result = parseFollowUp("ปุ้ยโทร 25/03/2025 สนใจสมัคร");
 
     expect(result?.occurredAt?.slice(0, 10)).toBe("2025-03-25");
     expect(result?.outcome).toBe("คุยแล้วสนใจ");
@@ -218,12 +218,29 @@ describe("วันติดต่อเข้ามาที่ยังมา�
     });
   });
 
-  it("อนาคตไม่เกิน 30 วันยังผ่าน เผื่อเครื่องที่กรอกตั้งวันผิดเล็กน้อย", () => {
-    expect(parseContactDate("11/10/2026").rejectedAsFuture).toBe(false);
-    expect(parseContactDate("11/10/2026").value).not.toBeNull();
+  it("วันนี้ยังผ่าน แม้เวลาที่ตีความจะเลยเวลาปัจจุบันไปแล้ว", () => {
+    // เวลาระบบคือ 10:00 น. ไทย ส่วนวันที่ในชีทตีความเป็นเที่ยงวัน
+    expect(parseContactDate("12/09/2026")).toEqual({
+      value: "2026-09-12T05:00:00.000Z",
+      rejectedAsFuture: false,
+    });
   });
 
-  it("เลยวันนี้เกิน 30 วันถือว่าพิมพ์ผิด ทิ้งค่าวันที่และบอกว่าถูกทิ้งเพราะอะไร", () => {
+  it("พรุ่งนี้ถือว่าอนาคตแล้ว — ชีทย้อนหลังไม่มีค่าเผื่อ", () => {
+    expect(parseContactDate("13/09/2026")).toEqual({ value: null, rejectedAsFuture: true });
+    expect(parseContactDate("11/10/2026").rejectedAsFuture).toBe(true);
+  });
+
+  it("ยึดวันตามเวลาไทย ไม่ใช่ UTC", () => {
+    // 23:30 น. ไทยของวันที่ 12 = 16:30 UTC — วันที่ 13 ยังเป็นพรุ่งนี้
+    vi.setSystemTime(new Date("2026-09-12T16:30:00.000Z"));
+    expect(parseContactDate("13/09/2026").rejectedAsFuture).toBe(true);
+    // 00:30 น. ไทยของวันที่ 13 = 17:30 UTC ของวันที่ 12 — วันที่ 13 คือวันนี้แล้ว
+    vi.setSystemTime(new Date("2026-09-12T17:30:00.000Z"));
+    expect(parseContactDate("13/09/2026").rejectedAsFuture).toBe(false);
+  });
+
+  it("เลยวันนี้ถือว่าพิมพ์ผิด ทิ้งค่าวันที่และบอกว่าถูกทิ้งเพราะอะไร", () => {
     expect(parseContactDate("02/12/2026")).toEqual({
       value: null,
       rejectedAsFuture: true,
