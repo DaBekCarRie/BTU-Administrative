@@ -5,7 +5,7 @@
 
 **Blocked by:** 01, 06
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] กรองตามหมวดได้
 - [ ] กรองตามปีการศึกษาได้
