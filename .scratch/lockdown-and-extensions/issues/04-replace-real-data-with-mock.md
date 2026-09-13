@@ -81,3 +81,24 @@ merged_people 22 · ไฟล์เอกสารรายคน 273 · แถ�
 ตรวจ: tsc · lint · unit 146 · build · **e2e 133/133** (รวมเทสต์ใหม่ของใบ 05) · db:verify
 
 ขั้นตอนนำข้อมูลจริงกลับอยู่ใน `docs/PROGRESS.md` หัวข้อ "นำข้อมูลจริงกลับเข้าระบบ"
+
+## ผลจาก /code-review (fixed point 24582e4 · ครอบใบ 04 และ 05)
+
+แก้แล้ว
+- **Spec (ก)1 — ชื่อคนจริงค้างใน `docs/PROGRESS.md`** (ข้อควรระวังเรื่อง regex) — `git grep` ของผมค้นแค่ชื่อเจ้าหน้าที่
+  จึงหลุด ลบออกแล้ว · ข้อติ๊ก "ค้นทั้งที่เก็บโค้ด" จึงเพิ่งเป็นจริงหลังแก้นี้ (history ยังมี — ดู HANDOFF ข้อค้าง 4)
+- Spec (ก)2 — ขั้นเตรียม Google OAuth: ตรวจ `/auth/v1/settings` แล้วว่า provider Google เปิดอยู่ ติ๊กใน PROGRESS
+- Spec (ก)3 — `spec.md` ตรงกับที่ทำจริงแล้ว (ด่านวันที่ไม่มีค่าเผื่อ · ผูกบัญชีด้วยสคริปต์ไม่ใช่ migration)
+- Spec (ค) — ขั้นนำข้อมูลจริงกลับพังบนเครื่องที่ไม่มีไฟล์ตารางชื่อ local → เพิ่ม `--skip-staff-rename`
+- Standards (ก) ADR-0001 — เพิ่มหัวข้อข้อยกเว้นการถอดข้อมูลส่วนบุคคลทั้งชุด
+- Standards 1 — ด่านวันที่ใช้ `endOfTodayBangkok()` จาก `@/lib/date` แทนคำนวณ offset เอง
+- Standards 2 — `scripts/lib/admin.ts` รวมการสร้าง service-role client และไล่รายชื่อไฟล์ Storage
+- Standards 3 — รายชื่อตาราง cascade เหลือชุดเดียว (`as const`)
+- Standards 4 — วันติดต่อที่ต้องเดา: ทางเลือกและตัวนับอยู่ในที่เดียว
+- Standards 5 — `PRIMARY_KEY` map แทน ternary ซ่อนในคิวรี
+- Standards 6 — ด่าน "ห้ามสำรองลงใน repo" ใช้ `path.relative` ไม่ใช่ string prefix
+
+ยอมรับไว้ (ไม่แก้): scope creep ที่ Spec ทัก — แก้สถานะอัปโหลดเอกสาร · migration สิทธิ์ service role ·
+การเดาวันติดต่อ ทั้งสามจำเป็นต่อการทำใบนี้ให้ผ่านและบันทึกเหตุผลไว้ข้างบนแล้ว
+
+ตรวจหลังแก้: tsc · lint · unit 146 · build · **e2e 133/133** · db:verify · dry-run ทั้งสามสคริปต์ได้ตัวเลขเท่าเดิม

@@ -61,14 +61,15 @@
 ## ข้อควรระวัง
 
 - **e2e รันกับโปรเจกต์จริงและทิ้งข้อมูลทดสอบไว้** นอกจาก 3,177 รายจากไฟล์สมมติ ชื่อทดสอบขึ้นต้นด้วย prefix จาก `uniqueName()`
-  ถ้าจะล้าง ให้เช็ค pattern กับข้อมูลจริงก่อนทุกครั้ง — เคยมี regex ไปโดนชื่อจริง "Weerapong Sa-arnwong" มาแล้ว
+  ถ้าจะล้าง ให้เช็ค pattern กับข้อมูลจริงก่อนทุกครั้ง — เคยมี regex ไปโดนชื่อคนจริงมาแล้ว
 - `npm run db:types` ใช้งานได้แล้ว (supabase CLI ลิงก์โปรเจกต์และ generate types สำเร็จแล้ว)
 
 ## ต้องทำเองในมือ
 
 - [x] ตั้ง `SUPABASE_SERVICE_ROLE_KEY` ใน `.env.local` (ใช้เฉพาะ `scripts/`)
-- [ ] ตั้งค่า Google Cloud Console: สร้าง OAuth Client ID (Web application) ใส่ Authorized redirect URI: `https://encpmkhwxctcvcytfmuo.supabase.co/auth/v1/callback`
-- [ ] ใส่ Client ID / Secret ใน Supabase Dashboard → Authentication → Providers → Google
+- [x] ตั้งค่า Google Cloud Console: สร้าง OAuth Client ID (Web application) ใส่ Authorized redirect URI: `https://encpmkhwxctcvcytfmuo.supabase.co/auth/v1/callback`
+- [x] ใส่ Client ID / Secret ใน Supabase Dashboard → Authentication → Providers → Google
+      (ตรวจ 13 ก.ย. 2569: `/auth/v1/settings` รายงาน provider Google เปิดอยู่ ซึ่งเปิดไม่ได้ถ้าไม่มี Client ID)
 - [x] Leaked Password Protection: Free plan ไม่รองรับ (เป็นฟีเจอร์ Pro) — ข้ามได้
 - [ ] ~~สร้างบัญชีให้เจ้าหน้าที่ 5 คน~~ **ไม่ตรงความจริง** — บัญชีเหล่านั้นเป็นโดเมนสมมติ `@btu-admin.dev`
       ไม่มีเจ้าหน้าที่คนไหนใช้จริง ถูกลบในใบ 05 (13 ก.ย. 2569) แถวเจ้าหน้าที่ยังอยู่และยังเป็นเจ้าของเคส
@@ -108,8 +109,8 @@
 
 ```bash
 npm run db:backup -- --out ~/btu-admin-backup-<วันที่>     # สำรองสภาพปัจจุบันก่อนเสมอ
-npm run db:reset-to-mock                                  # ดูจำนวนที่จะลบ
-npm run db:reset-to-mock -- --confirm                     # ลบคน/เหตุการณ์/เอกสารรายคน
+npm run db:reset-to-mock -- --skip-staff-rename           # ดูจำนวนที่จะลบ
+npm run db:reset-to-mock -- --skip-staff-rename --confirm # ลบคน/เหตุการณ์/เอกสารรายคน ไม่แตะชื่อเจ้าหน้าที่
 npm run import:leads -- --file "<ชีทจริง>.csv" --dry-run   # ตัวเลขต้องตรงกับที่เคยนำเข้า
 npm run import:leads -- --file "<ชีทจริง>.csv"
 npm run db:verify
@@ -117,8 +118,8 @@ npm run db:verify
 
 **ชื่อเจ้าหน้าที่ต้องกลับเป็นชื่อจริงก่อนนำเข้า** ไม่งั้นช่องผู้ดูแลจับคู่ไม่ได้ทั้งหมด —
 แก้ `staff.display_name` ย้อนตาราง `owners` ใน `scripts/mock-staff.local.json` (ชื่อจริง → ชื่อสมมติ)
-หรือเทียบกับ `staff.json` ในไฟล์สำรอง (id เดิม) · `reset-to-mock` เปลี่ยนเฉพาะชื่อที่ตรงกับตารางนั้น
-ชื่อจริงจึงไม่ถูกแตะซ้ำ
+หรือเทียบกับ `staff.json` ในไฟล์สำรอง (id เดิม — ใช้ทางนี้บนเครื่องที่ไม่มีไฟล์ local นั้น)
+`--skip-staff-rename` ทำให้สคริปต์ไม่ต้องใช้ไฟล์ตารางชื่อเลย
 
 ที่ชีทไม่มีและต้องกู้จากไฟล์สำรองถ้าต้องการ: การสมัคร การชำระเงิน เอกสารรายคนและไฟล์
 คำขอศูนย์สอบ ร่องรอยการเปิดดู เลขบัตรที่เข้ารหัส — ตรวจไฟล์สำรองแล้ว **ไม่มีสักแถวที่ผูกกับคนจากชีท**

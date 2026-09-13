@@ -102,9 +102,11 @@ async function main() {
   let futureAppointments = 0;
   let futureContactDates = 0;
   let lastContactedAt: string | null = null;
-  let contactDateFromPreviousRow = 0;
-  let contactDateFromFollowUp = 0;
-  let contactDateFromFirstRow = 0;
+  const guessedContactDates: Record<"แถวก่อนหน้า" | "วันติดตาม" | "วันแรกในไฟล์", number> = {
+    แถวก่อนหน้า: 0,
+    วันติดตาม: 0,
+    วันแรกในไฟล์: 0,
+  };
   const firstContactDateInFile =
     dataRows.map((row) => parseContactDate(row[COL.contactedAt]).value).find((value) => value !== null) ??
     new Date().toISOString();
@@ -139,10 +141,13 @@ async function main() {
         .map((column) => parseFollowUp(row[column])?.occurredAt ?? null)
         .filter((value): value is string => value !== null)
         .sort()[0];
-      contactedAt = lastContactedAt ?? earliestFollowUp ?? firstContactDateInFile;
-      if (lastContactedAt) contactDateFromPreviousRow += 1;
-      else if (earliestFollowUp) contactDateFromFollowUp += 1;
-      else contactDateFromFirstRow += 1;
+      const [source, guessed] = lastContactedAt
+        ? (["แถวก่อนหน้า", lastContactedAt] as const)
+        : earliestFollowUp
+          ? (["วันติดตาม", earliestFollowUp] as const)
+          : (["วันแรกในไฟล์", firstContactDateInFile] as const);
+      contactedAt = guessed;
+      guessedContactDates[source] += 1;
     }
 
     const facultyName = normalizeFaculty(row[COL.faculty]);
@@ -274,7 +279,7 @@ async function main() {
   console.log(`นัดโทรที่ยังไม่ถึงกำหนด  ${futureAppointments}`);
   console.log(`วันติดต่อเข้ามาในอนาคต  ${futureContactDates} (ทิ้งค่าวันที่)`);
   console.log(
-    `วันติดต่อที่ต้องเดา     แถวก่อนหน้า ${contactDateFromPreviousRow} · วันติดตาม ${contactDateFromFollowUp} · วันแรกในไฟล์ ${contactDateFromFirstRow}`,
+    `วันติดต่อที่ต้องเดา     ${Object.entries(guessedContactDates).map(([source, n]) => `${source} ${n}`).join(" · ")}`,
   );
   console.log(`ชื่อซ้ำ                ${duplicateNames.length} กลุ่ม (${duplicateNames.reduce((n, [, r]) => n + r.length - 1, 0)} แถวเกิน)`);
   console.log(`เบอร์ซ้ำ               ${duplicatePhones.length} กลุ่ม`);

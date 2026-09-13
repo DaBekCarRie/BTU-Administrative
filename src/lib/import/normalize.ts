@@ -12,6 +12,7 @@ import type {
   PriorEducation,
   StudyMode,
 } from "../domain/events";
+import { endOfTodayBangkok } from "../date";
 
 export type { CallOutcome, FollowUpStatus, PriorEducation, StudyMode };
 
@@ -244,14 +245,6 @@ export function parseThaiDate(input: string | null): string | null {
   return null;
 }
 
-/** ไทยไม่มีเวลาออมแสง — UTC+7 ตลอดปี */
-const BANGKOK_OFFSET_MS = 7 * 3_600_000;
-
-function endOfTodayBangkokMs(): number {
-  const startOfDay = Math.floor((Date.now() + BANGKOK_OFFSET_MS) / DAY_MS) * DAY_MS - BANGKOK_OFFSET_MS;
-  return startOfDay + DAY_MS - 1;
-}
-
 /**
  * วันที่คนติดต่อเข้ามา — ต้องไม่เลยวันนี้ (เวลาไทย) ต่างจากวันนัดโทรที่เป็นอนาคตโดยธรรมชาติ
  * ด่านหนึ่งปีของ parseThaiDate กว้างเกินไปสำหรับช่องนี้: เคยมี 26 แถวรอดมาได้
@@ -267,7 +260,7 @@ export function parseContactDate(input: string | null): {
   const value = parseThaiDate(input);
   if (!value) return { value: null, rejectedAsFuture: false };
 
-  if (Date.parse(value) > endOfTodayBangkokMs()) return { value: null, rejectedAsFuture: true };
+  if (Date.parse(value) > Date.parse(endOfTodayBangkok())) return { value: null, rejectedAsFuture: true };
 
   return { value, rejectedAsFuture: false };
 }

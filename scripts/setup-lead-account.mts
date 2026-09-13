@@ -13,12 +13,11 @@
  *
  * รันซ้ำได้ ไม่พิมพ์ชื่อหรืออีเมลของบัญชีที่ลบออกจอ
  */
-import { createClient, type User } from "@supabase/supabase-js";
-import { config as loadEnv } from "dotenv";
+import type { User } from "@supabase/supabase-js";
 
-import type { Database } from "../src/types/database";
+import { createAdminClient } from "./lib/admin";
 
-loadEnv({ path: ".env.local", quiet: true });
+const admin = createAdminClient();
 
 const args = process.argv.slice(2);
 const emailIndex = args.indexOf("--email");
@@ -29,17 +28,6 @@ if (!leadEmail || !leadEmail.includes("@")) {
   console.error('ต้องระบุอีเมลหัวหน้าทีม: --email "<อีเมล>"');
   process.exit(1);
 }
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !serviceKey) {
-  console.error("ต้องตั้ง NEXT_PUBLIC_SUPABASE_URL และ SUPABASE_SERVICE_ROLE_KEY ใน .env.local");
-  process.exit(1);
-}
-
-const admin = createClient<Database>(url, serviceKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
 
 const PLACEHOLDER_DOMAIN = "@btu-admin.dev";
 /** ชุดทดสอบสิทธิ์ใช้อยู่ ห้ามลบ (ดู e2e/README.md) */
