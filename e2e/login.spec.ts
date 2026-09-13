@@ -33,14 +33,19 @@ test.describe("เข้าสู่ระบบ", () => {
 
     // เมนูครบทุกหน้า — จำกัดขอบเขตไว้ใน sidebar เพราะกระดานงานก็มีลิงก์ชื่อเดียวกัน
     const nav = page.locator("aside nav");
-    for (const label of [
-      "คิวโทรวันนี้",
-      "ผู้สนใจ",
-      "เอกสาร",
-      "ศูนย์สอบพิเศษ",
-      "คำถามที่พบบ่อย",
+    // หาจาก testid ของแต่ละเมนู: ชื่อลิงก์มีตัวเลขงานค้างต่อท้าย และ "เอกสาร" เป็นส่วนหนึ่งของ "เอกสารอ้างอิง"
+    for (const [href, label] of [
+      ["/", "หน้าแรก"],
+      ["/queue", "คิวโทรวันนี้"],
+      ["/leads", "ผู้สนใจ"],
+      ["/documents", "เอกสาร"],
+      ["/reference", "เอกสารอ้างอิง"],
+      ["/exams", "ศูนย์สอบพิเศษ"],
+      ["/faq", "คำถามที่พบบ่อย"],
     ]) {
-      await expect(nav.getByRole("link", { name: label })).toBeVisible();
+      const link = nav.getByTestId(`nav-item-${href}`);
+      await expect(link).toBeVisible();
+      await expect(link).toContainText(label);
     }
 
     await page.getByRole("button", { name: "ออกจากระบบ" }).click();

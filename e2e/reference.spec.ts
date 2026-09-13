@@ -1,0 +1,105 @@
+import { expect, test, type Page } from "@playwright/test";
+
+import { uniqueName } from "./helpers";
+
+const PNG = "e2e/fixtures/doc.png";
+const PDF = "e2e/fixtures/doc.pdf";
+
+async function addReference(
+  page: Page,
+  { title, category, year, files }: { title: string; category: string; year?: string; files: string[] },
+) {
+  await page.goto("/reference");
+  await page.getByTestId("add-reference").click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("หมวด").selectOption(category);
+  await dialog.getByLabel("ชื่อเรื่อง").fill(title);
+  if (year !== undefined) await dialog.getByLabel("ปีการศึกษา").selectOption(year);
+  if (files.length > 0) await dialog.getByLabel("ไฟล์ (เลือกได้หลายไฟล์)").setInputFiles(files);
+  await dialog.getByRole("button", { name: "บันทึก" }).click();
+  await expect(dialog).toBeHidden({ timeout: 20_000 });
+  return page.getByTestId("reference-item").filter({ hasText: title });
+}
+
+test.describe("เอกสารอ้างอิง", () => {
+  test("เมนูแยกจากเอกสารประจำตัว", async ({ page }) => {
+    await page.goto("/queue");
+    const sidebar = page.getByTestId("sidebar");
+    await sidebar.getByRole("link", { name: "เอกสารอ้างอิง" }).click();
+    await page.waitForURL(/\/reference$/);
+    await expect(page.getByRole("heading", { name: "เอกสารอ้างอิง" })).toBeVisible();
+  });
+
+  test("เพิ่มตารางสอบพร้อมปีการศึกษาและแนบหลายไฟล์ เห็นว่าใครอัปโหลด", async ({ page }) => {
+    const title = uniqueName("ตารางสอบ");
+    const item = await addReference(page, { title, category: "ตารางสอบ", files: [PNG, PDF] });
+
+    await expect(item).toBeVisible();
+    await expect(item).toContainText("ตารางสอบ");
+    await expect(item.getByTestId("reference-year")).toContainText(/ปีการศึกษา 25\d\d/);
+    await expect(item).toContainText("อัปโหลดโดย");
+    await expect(item.getByTestId("reference-file")).toHaveCount(2);
+    await expect(item).toContainText("PDF");
+    // ไม่มีสถานะผ่าน/ไม่ผ่าน — ไม่ใช่เอกสารที่ต้องตรวจ
+    await expect(item).not.toContainText(/ผ่าน|ส่งแล้ว/);
+  });
+
+  test("ของที่ไม่ผูกกับปีเว้นปีการศึกษาได้", async ({ page }) => {
+    const title = uniqueName("โปสเตอร์");
+    const item = await addReference(page, { title, category: "สื่อประชาสัมพันธ์", year: "", files: [PNG] });
+    await expect(item.getByTestId("reference-year")).toHaveText("ไม่ผูกกับปี");
+  });
+
+  test("เปิดไฟล์ได้ผ่านลิงก์อายุสั้นจาก bucket เอกสารอ้างอิง", async ({ page }) => {
+    const title = uniqueName("ปฏิทิน");
+    const item = await addReference(page, { title, category: "ปฏิทินการศึกษา", files: [PDF] });
+
+    // ดูที่คำขอของแท็บใหม่ ไม่รอให้หน้าโหลด — Chromium แบบ headless เปลี่ยน PDF เป็นการดาวน์โหลด
+    // การนำทางจึงถูกยกเลิกกลางทาง ทั้งที่ลิงก์ถูกต้อง
+    const signedRequest = page
+      .context()
+      .waitForEvent("request", (request) => /\/storage\/v1\/object\/sign\/reference\//.test(request.url()));
+    await item.getByTestId("reference-file").click();
+    const request = await signedRequest;
+    expect(request.url()).toContain("token=");
+  });
+
+  test("แก้ชื่อเรื่องได้ และแนบไฟล์เพิ่มทีหลังได้", async ({ page }) => {
+    const title = uniqueName("แบบฟอร์ม");
+    const item = await addReference(page, { title, category: "แบบฟอร์ม", files: [] });
+    await expect(item).toContainText("ยังไม่มีไฟล์");
+
+    await item.getByTestId("attach-reference-files").setInputFiles([PNG]);
+    await expect(item.getByTestId("reference-file")).toHaveCount(1, { timeout: 20_000 });
+
+    const renamed = `${title} ฉบับแก้`;
+    await item.getByTestId("edit-reference").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("ชื่อเรื่อง").fill(renamed);
+    await dialog.getByRole("button", { name: "บันทึก" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId("reference-item").filter({ hasText: renamed })).toBeVisible();
+  });
+
+  test("ชนิดไฟล์ที่ไม่รับถูกปฏิเสธ ไม่ขึ้นเป็นไฟล์แนบ", async ({ page }) => {
+    const title = uniqueName("ประกาศ");
+    const item = await addReference(page, { title, category: "ประกาศ", files: [] });
+    await item.getByTestId("attach-reference-files").setInputFiles({
+      name: "สรุป.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("ไม่ใช่รูปหรือ PDF"),
+    });
+    await expect(page.getByText(/รับเฉพาะรูปภาพและ PDF/)).toBeVisible();
+    await expect(item.getByTestId("reference-file")).toHaveCount(0);
+  });
+
+  test.describe("มือถือ", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test("หน้าเอกสารอ้างอิงใช้งานได้บนมือถือ", async ({ page }) => {
+      await page.goto("/reference");
+      await expect(page.getByTestId("mobile-header")).toContainText("เอกสารอ้างอิง");
+      await expect(page.getByTestId("add-reference")).toBeVisible();
+    });
+  });
+});

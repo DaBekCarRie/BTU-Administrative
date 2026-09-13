@@ -648,6 +648,92 @@ export type Database = {
           },
         ]
       }
+      reference_document_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string
+          reference_document_id: string
+          size_bytes: number | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type: string
+          reference_document_id: string
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          reference_document_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_document_files_reference_document_id_fkey"
+            columns: ["reference_document_id"]
+            isOneToOne: false
+            referencedRelation: "reference_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reference_document_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reference_documents: {
+        Row: {
+          academic_year: number | null
+          category: Database["public"]["Enums"]["reference_category"]
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          academic_year?: number | null
+          category: Database["public"]["Enums"]["reference_category"]
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          academic_year?: number | null
+          category?: Database["public"]["Enums"]["reference_category"]
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           auth_user_id: string | null
@@ -921,6 +1007,13 @@ export type Database = {
         | "ปวส."
         | "ปริญญาตรี"
         | "อื่นๆ"
+      reference_category:
+        | "ตารางสอบ"
+        | "ปฏิทินการศึกษา"
+        | "แบบฟอร์ม"
+        | "ประกาศ"
+        | "สื่อประชาสัมพันธ์"
+        | "อื่นๆ"
       study_mode: "ปกติ" | "สมทบ" | "ทางไกล"
     }
     CompositeTypes: {
@@ -1097,6 +1190,14 @@ export const Constants = {
         "ปวช.",
         "ปวส.",
         "ปริญญาตรี",
+        "อื่นๆ",
+      ],
+      reference_category: [
+        "ตารางสอบ",
+        "ปฏิทินการศึกษา",
+        "แบบฟอร์ม",
+        "ประกาศ",
+        "สื่อประชาสัมพันธ์",
         "อื่นๆ",
       ],
       study_mode: ["ปกติ", "สมทบ", "ทางไกล"],

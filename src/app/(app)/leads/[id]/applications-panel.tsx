@@ -26,7 +26,7 @@ import {
   saveStudentCode,
 } from "./application-actions";
 import { thaiYearNow } from "@/lib/date";
-import imageCompression from "browser-image-compression";
+import { prepareUpload } from "@/lib/prepare-upload";
 import { createClient } from "@/lib/supabase/client";
 
 const selectClass =
@@ -37,9 +37,7 @@ async function uploadSlip(
   personId: string,
   file: File,
 ): Promise<{ path: string } | { error: string }> {
-  const prepared = file.type.startsWith("image/")
-    ? await imageCompression(file, { maxSizeMB: 0.3, maxWidthOrHeight: 1600, useWebWorker: true })
-    : file;
+  const prepared = await prepareUpload(file);
   const extension = file.name.split(".").pop() ?? "bin";
   const path = `${personId}/slip-${Date.now()}.${extension}`;
 

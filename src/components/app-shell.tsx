@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Database,
   FileText,
+  FolderOpen,
   House,
   LogOut,
   MapPin,
@@ -42,6 +43,7 @@ const MAIN_NAV: NavItem[] = [
   { href: "/queue", label: "คิวโทรวันนี้", shortLabel: "คิวโทร", icon: PhoneCall, countKey: "queue" },
   { href: "/leads", label: "ผู้สนใจ", shortLabel: "ผู้สนใจ", icon: Users },
   { href: "/documents", label: "เอกสาร", shortLabel: "เอกสาร", icon: FileText, countKey: "documents" },
+  { href: "/reference", label: "เอกสารอ้างอิง", icon: FolderOpen },
   { href: "/exams", label: "ศูนย์สอบพิเศษ", icon: MapPin },
   { href: "/faq", label: "คำถามที่พบบ่อย", icon: CircleHelp },
 ];
@@ -62,6 +64,7 @@ function getPageTitle(pathname: string): { title: string; subtitle: string } {
   if (pathname.startsWith("/queue")) return { title: "คิวโทรวันนี้", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/leads")) return { title: "ผู้สนใจ", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/documents")) return { title: "เอกสาร", subtitle: "ทีม LMS · มกธ." };
+  if (pathname.startsWith("/reference")) return { title: "เอกสารอ้างอิง", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/exams")) return { title: "ศูนย์สอบพิเศษ", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/faq")) return { title: "คำถามที่พบบ่อย", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/master-data")) return { title: "ข้อมูลหลัก (คณะ/สาขา)", subtitle: "ทีม LMS · มกธ." };

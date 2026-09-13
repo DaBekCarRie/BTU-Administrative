@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import imageCompression from "browser-image-compression";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +14,9 @@ import {
 } from "@/app/(app)/documents/actions";
 import type { DocumentChecklist } from "@/lib/data/documents";
 import { DOC_TYPE_SLUG, type DocType } from "@/lib/documents-shared";
+import { prepareUpload } from "@/lib/prepare-upload";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * รูปจากมือถือมักใหญ่ 3-5 MB ต่อใบ คูณ 4 ใบ คูณ 500 คน/ปี จะชนเพดาน storage ใน 1 ปี
- * ย่อเหลือประมาณ 300 KB อ่านออกเท่าเดิม
- */
-const COMPRESSION = { maxSizeMB: 0.3, maxWidthOrHeight: 1600, useWebWorker: true };
 
 export function DocumentChecklistPanel({
   personId,
@@ -39,9 +34,7 @@ export function DocumentChecklistPanel({
   async function upload(docType: DocType, file: File) {
     setBusy(docType);
     try {
-      const prepared = file.type.startsWith("image/")
-        ? await imageCompression(file, COMPRESSION)
-        : file;
+      const prepared = await prepareUpload(file);
 
       const extension = file.name.split(".").pop() ?? "bin";
       const path = `${personId}/${DOC_TYPE_SLUG[docType]}-${Date.now()}.${extension}`;

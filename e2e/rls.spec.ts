@@ -27,6 +27,8 @@ test.describe("RLS — ยังไม่ล็อกอินต้องไม
     "answers",
     "exam_center_requests",
     "merged_people",
+    "reference_documents",
+    "reference_document_files",
   ] as const) {
     test(`ตาราง ${table} คืนว่างเปล่า`, async () => {
       const { data, error } = await anon().from(table).select("*").limit(1);
@@ -57,6 +59,11 @@ test.describe("RLS — ยังไม่ล็อกอินต้องไม
       p_state: {},
     });
     expect(error).not.toBeNull();
+  });
+
+  test("bucket เอกสารอ้างอิงเปิดรายการไฟล์ไม่ได้", async () => {
+    const { data, error } = await anon().storage.from("reference").list();
+    expect(error ?? (data ?? []).length === 0).toBeTruthy();
   });
 
   test("bucket เอกสารเปิดรายการไฟล์ไม่ได้", async () => {
