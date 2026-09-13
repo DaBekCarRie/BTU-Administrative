@@ -69,3 +69,22 @@ export function startOfTodayBangkok(): string {
 export function endOfTodayBangkok(): string {
   return dayjs().tz(TZ).endOf("day").toISOString();
 }
+
+/**
+ * ช่วงเดือนตามเวลาไทย [from, to) ในรูป ISO (UTC) สำหรับส่งเข้า query
+ * offsetMonths 0 = เดือนนี้ · -1 = เดือนที่แล้ว
+ *
+ * ต้องคิดจากเวลาไทย ไม่ใช่ UTC — ตอนเช้าตรู่วันที่ 1 UTC ยังเป็นเดือนก่อน
+ */
+export function monthRangeBangkok(offsetMonths = 0): {
+  from: string;
+  to: string;
+  label: string;
+} {
+  const start = dayjs().tz(TZ).startOf("month").add(offsetMonths, "month");
+  return {
+    from: start.toISOString(),
+    to: start.add(1, "month").toISOString(),
+    label: start.format("MMM BBBB"),
+  };
+}

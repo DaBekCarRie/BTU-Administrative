@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { toDateInputValue } from "./date";
+import { monthRangeBangkok, toDateInputValue } from "./date";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -34,5 +34,44 @@ describe("toDateInputValue", () => {
     vi.setSystemTime(new Date("2026-09-29T18:00:00.000Z")); // 30 ก.ย. ตี 1 ที่กรุงเทพ
 
     expect(toDateInputValue(1)).toBe("2026-10-01");
+  });
+});
+
+describe("monthRangeBangkok", () => {
+  /**
+   * กระดานภาพรวมนับตามเดือนไทย ช่วงเที่ยงคืนถึง 7 โมงเช้า UTC ยังเป็นเดือนก่อน
+   * ถ้าคำนวณจาก UTC วันที่ 1 ตอนเช้าตรู่จะได้ตัวเลขของเดือนที่แล้ว
+   */
+  it("ตี 1 ของวันที่ 1 ตุลาคมเวลาไทย เดือนนี้คือตุลาคม ไม่ใช่กันยายน", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T18:00:00.000Z")); // 1 ต.ค. ตี 1 ที่กรุงเทพ
+
+    expect(monthRangeBangkok()).toEqual({
+      from: "2026-09-30T17:00:00.000Z",
+      to: "2026-10-31T17:00:00.000Z",
+      label: "ต.ค. 2569",
+    });
+  });
+
+  it("เดือนที่แล้วต่อกันพอดีกับเดือนนี้ ไม่มีช่องว่างหรือทับกัน", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T18:00:00.000Z"));
+
+    const current = monthRangeBangkok();
+    const previous = monthRangeBangkok(-1);
+    expect(previous).toEqual({
+      from: "2026-08-31T17:00:00.000Z",
+      to: "2026-09-30T17:00:00.000Z",
+      label: "ก.ย. 2569",
+    });
+    expect(previous.to).toBe(current.from);
+  });
+
+  it("ย้อนข้ามปีได้ถูก", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-15T05:00:00.000Z"));
+
+    expect(monthRangeBangkok(-1).label).toBe("ธ.ค. 2569");
+    expect(monthRangeBangkok(-1).from).toBe("2026-11-30T17:00:00.000Z");
   });
 });

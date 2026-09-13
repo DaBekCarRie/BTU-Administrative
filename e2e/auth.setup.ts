@@ -11,7 +11,9 @@ setup("ล็อกอินเก็บ session ไว้ใช้ร่วม�
   await page.getByLabel("อีเมล").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("รหัสผ่าน").fill(process.env.E2E_PASSWORD!);
   await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-  await expect(page).toHaveURL(/\/queue/);
+  // ล็อกอิน → redirect → render คิวโทร ใช้เกือบ 4 วินาทีตอน server เพิ่งเปิด
+  // timeout มาตรฐาน 5 วินาทีทำให้ทั้งชุดล้มเป็นช่วง ๆ ทั้งที่ล็อกอินได้ปกติ
+  await expect(page).toHaveURL(/\/queue/, { timeout: 20_000 });
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

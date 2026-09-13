@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Database,
   FileText,
+  House,
   LogOut,
   MapPin,
   Menu,
@@ -37,6 +38,7 @@ type NavItem = {
 };
 
 const MAIN_NAV: NavItem[] = [
+  { href: "/", label: "หน้าแรก", icon: House },
   { href: "/queue", label: "คิวโทรวันนี้", shortLabel: "คิวโทร", icon: PhoneCall, countKey: "queue" },
   { href: "/leads", label: "ผู้สนใจ", shortLabel: "ผู้สนใจ", icon: Users },
   { href: "/documents", label: "เอกสาร", shortLabel: "เอกสาร", icon: FileText, countKey: "documents" },
@@ -56,6 +58,7 @@ function getInitials(name: string): string {
 }
 
 function getPageTitle(pathname: string): { title: string; subtitle: string } {
+  if (pathname === "/") return { title: "หน้าแรก", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/queue")) return { title: "คิวโทรวันนี้", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/leads")) return { title: "ผู้สนใจ", subtitle: "ทีม LMS · มกธ." };
   if (pathname.startsWith("/documents")) return { title: "เอกสาร", subtitle: "ทีม LMS · มกธ." };
@@ -404,7 +407,8 @@ export function AppShell({
         aria-label="เมนูลัดบนมือถือ"
         className="fixed inset-x-0 bottom-0 z-30 grid h-14 grid-cols-4 border-t border-zinc-200 bg-white/95 px-1 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
       >
-        {MAIN_NAV.slice(0, 3).map((item) => {
+        {/* หน้าแรกไม่อยู่ในแถบล่าง — แถบล่างคงงานประจำวันสามอย่างไว้เหมือนเดิม */}
+        {MAIN_NAV.filter((item) => item.href !== "/").slice(0, 3).map((item) => {
           const active = isNavActive(item.href);
           const count = item.countKey ? badgeCounts[item.countKey] : 0;
           const Icon = item.icon;

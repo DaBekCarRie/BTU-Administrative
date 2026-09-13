@@ -807,6 +807,16 @@ export type Database = {
       }
     }
     Functions: {
+      application_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          applied: number
+          contacted: number
+          interested: number
+          paid: number
+          student_code: number
+        }[]
+      }
       apply_person_state: {
         Args: { p_id: string; p_state: Json }
         Returns: undefined

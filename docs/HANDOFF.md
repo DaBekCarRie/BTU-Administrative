@@ -48,7 +48,7 @@
 
 - project id `encpmkhwxctcvcytfmuo` (ชื่อ `btu-admin`) — ถ้าเจอ "You do not have permission"
   แปลว่าใส่ id ผิด ไม่ใช่สิทธิ์ขาด
-- migration 25 ไฟล์ = 25 version ที่ฐานข้อมูลบันทึก ตรงกันหมด **ห้ามให้หลุด**
+- migration 26 ไฟล์ = 26 version ที่ฐานข้อมูลบันทึก ตรงกันหมด **ห้ามให้หลุด**
   ถ้าใช้เครื่องมือที่ตั้ง timestamp เอง ต้อง rename ไฟล์ให้ตรงหลังจากนั้น
 - ยืนยันแล้วว่าไฟล์ migration ทั้งชุดเล่นใหม่บน PostgreSQL 17 เปล่า ๆ ได้ schema ตรงกับของจริง
   ทุก object (เทียบด้วย hash แบบไม่ขึ้นกับ collation)
