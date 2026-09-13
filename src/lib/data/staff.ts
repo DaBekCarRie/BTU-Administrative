@@ -1,12 +1,13 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { Tables } from "@/types/database";
 
 /**
  * แถวเจ้าหน้าที่ของผู้ใช้ที่ล็อกอินอยู่ — ว่างถ้ายังไม่ล็อกอิน ไม่ใช่เจ้าหน้าที่ หรือถูกปิดใช้งาน
  * (RLS ของตาราง staff กันเจ้าหน้าที่ที่ถูกปิดใช้งานไว้แล้ว — ADR-0005)
  */
-async function currentStaff(): Promise<{ id: string; role: string } | null> {
+async function currentStaff(): Promise<Pick<Tables<"staff">, "id" | "role"> | null> {
   const supabase = await createClient();
   const {
     data: { user },

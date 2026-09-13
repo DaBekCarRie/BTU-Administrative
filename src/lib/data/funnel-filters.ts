@@ -13,7 +13,6 @@ export type FunnelFilters = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-
 /** แปลง query string เป็นตัวกรองกระดานภาพรวม — ค่าที่ไม่รู้จักถูกทิ้ง ไม่ใช่ส่งต่อไปที่ฐานข้อมูล */
 export function parseFunnelFilters(
   params: Record<string, string | string[] | undefined>,
