@@ -5,7 +5,7 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] กรองกรวยทั้งกระดานตามคณะ
 - [ ] กรองกรวยทั้งกระดานตามภาค
