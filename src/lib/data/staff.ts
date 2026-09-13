@@ -3,12 +3,10 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * รหัสเจ้าหน้าที่ของผู้ใช้ที่ล็อกอินอยู่
- *
- * ต่างจาก `auth.uid()` เพราะ "เจ้าหน้าที่" กับ "บัญชีเข้าระบบ" แยกกันตั้งแต่ใบ 15
- * เจ้าหน้าที่ที่มีชื่อในข้อมูลเดิมแต่ยังไม่มีบัญชี ก็เป็นเจ้าของเคสได้
+ * แถวเจ้าหน้าที่ของผู้ใช้ที่ล็อกอินอยู่ — ว่างถ้ายังไม่ล็อกอิน ไม่ใช่เจ้าหน้าที่ หรือถูกปิดใช้งาน
+ * (RLS ของตาราง staff กันเจ้าหน้าที่ที่ถูกปิดใช้งานไว้แล้ว — ADR-0005)
  */
-export async function currentStaffId(): Promise<string | null> {
+async function currentStaff(): Promise<{ id: string; role: string } | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,11 +15,22 @@ export async function currentStaffId(): Promise<string | null> {
 
   const { data } = await supabase
     .from("staff")
-    .select("id")
+    .select("id, role")
     .eq("auth_user_id", user.id)
+    .eq("is_active", true)
     .maybeSingle();
 
-  return data?.id ?? null;
+  return data;
+}
+
+/**
+ * รหัสเจ้าหน้าที่ของผู้ใช้ที่ล็อกอินอยู่
+ *
+ * ต่างจาก `auth.uid()` เพราะ "เจ้าหน้าที่" กับ "บัญชีเข้าระบบ" แยกกันตั้งแต่ใบ 15
+ * เจ้าหน้าที่ที่มีชื่อในข้อมูลเดิมแต่ยังไม่มีบัญชี ก็เป็นเจ้าของเคสได้
+ */
+export async function currentStaffId(): Promise<string | null> {
+  return (await currentStaff())?.id ?? null;
 }
 
 /**
@@ -29,18 +38,5 @@ export async function currentStaffId(): Promise<string | null> {
  * ด่านจริงอยู่ที่ policy ของฐานข้อมูล ซ่อนปุ่มอย่างเดียวไม่พอ
  */
 export async function isTeamLead(): Promise<boolean> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const { data } = await supabase
-    .from("staff")
-    .select("role")
-    .eq("auth_user_id", user.id)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  return data?.role === "admin";
+  return (await currentStaff())?.role === "admin";
 }

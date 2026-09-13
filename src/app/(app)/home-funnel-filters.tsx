@@ -93,7 +93,8 @@ export function HomeFunnelFilters({
           id="funnel-mode"
           className={selectClass}
           value={filters.studyMode}
-          onChange={(event) => update({ studyMode: event.target.value })}
+          // ค่ามาจากตัวเลือกที่สร้างจาก enum ข้างล่างเท่านั้น
+          onChange={(event) => update({ studyMode: event.target.value as FunnelFilters["studyMode"] })}
         >
           <option value="">ทุกภาค</option>
           {Constants.public.Enums.study_mode.map((mode) => (

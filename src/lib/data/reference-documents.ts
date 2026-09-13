@@ -44,7 +44,7 @@ export async function listReferenceDocuments(filters: ReferenceFilters): Promise
 
   // พิมพ์ไม่ครบก็เจอ — ค้นเป็นส่วนหนึ่งของชื่อเรื่อง
   if (filters.q) query = query.ilike("title", `%${escapeLikePattern(filters.q)}%`);
-  if (filters.category) query = query.eq("category", filters.category as ReferenceCategory);
+  if (filters.category) query = query.eq("category", filters.category);
   if (filters.year === "none") query = query.is("academic_year", null);
   else if (filters.year) query = query.eq("academic_year", Number(filters.year));
 

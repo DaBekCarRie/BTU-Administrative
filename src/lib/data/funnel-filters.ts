@@ -1,33 +1,31 @@
-import { Constants } from "@/types/database";
+import { Constants, type Enums } from "@/types/database";
+import { firstParam } from "@/lib/search-params";
 
 /** เดือนนี้ + ย้อนหลังห้าเดือน = หกเดือน */
 export const FUNNEL_HISTORY_MONTHS = 6;
 
 export type FunnelFilters = {
   facultyId: string;
-  studyMode: string;
+  studyMode: Enums<"study_mode"> | "";
   /** 0 = เดือนนี้ · -1 = เดือนที่แล้ว … -5 */
   monthOffset: number;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function one(value: string | string[] | undefined): string {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 /** แปลง query string เป็นตัวกรองกระดานภาพรวม — ค่าที่ไม่รู้จักถูกทิ้ง ไม่ใช่ส่งต่อไปที่ฐานข้อมูล */
 export function parseFunnelFilters(
   params: Record<string, string | string[] | undefined>,
 ): FunnelFilters {
-  const facultyId = one(params.faculty);
-  const studyMode = one(params.mode);
-  const month = Number(one(params.month) || "0");
+  const facultyId = firstParam(params.faculty);
+  const studyMode = firstParam(params.mode);
+  const month = Number(firstParam(params.month) || "0");
 
   return {
     facultyId: UUID.test(facultyId) ? facultyId : "",
     studyMode: (Constants.public.Enums.study_mode as readonly string[]).includes(studyMode)
-      ? studyMode
+      ? (studyMode as Enums<"study_mode">)
       : "",
     monthOffset:
       Number.isInteger(month) && month <= 0 && month > -FUNNEL_HISTORY_MONTHS ? month : 0,

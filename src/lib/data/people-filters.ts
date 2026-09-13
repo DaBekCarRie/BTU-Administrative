@@ -1,4 +1,5 @@
 import { Constants } from "@/types/database";
+import { firstParam } from "@/lib/search-params";
 
 export type PeopleFilters = {
   q: string;
@@ -11,28 +12,25 @@ export type PeopleFilters = {
 
 export const PAGE_SIZE = 25;
 
-function one(value: string | string[] | undefined): string {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 /** แปลง query string เป็นตัวกรอง — ค่าที่ไม่รู้จักถูกทิ้ง ไม่ใช่ส่งต่อไปที่ฐานข้อมูล */
 export function parseFilters(
   params: Record<string, string | string[] | undefined>,
 ): PeopleFilters {
-  const status = one(params.status);
-  const studyMode = one(params.studyMode);
-  const page = Number.parseInt(one(params.page) || "1", 10);
+  const status = firstParam(params.status);
+  const studyMode = firstParam(params.studyMode);
+  const page = Number.parseInt(firstParam(params.page) || "1", 10);
 
   return {
-    q: one(params.q),
+    q: firstParam(params.q),
     status: (Constants.public.Enums.follow_up_status as readonly string[]).includes(status)
       ? status
       : "",
-    facultyId: one(params.facultyId),
+    facultyId: firstParam(params.facultyId),
     studyMode: (Constants.public.Enums.study_mode as readonly string[]).includes(studyMode)
       ? studyMode
       : "",
-    ownerId: one(params.ownerId),
+    ownerId: firstParam(params.ownerId),
     page: Number.isFinite(page) && page > 0 ? page : 1,
   };
 }

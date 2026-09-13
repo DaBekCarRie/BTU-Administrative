@@ -11,7 +11,7 @@ import {
 } from "@/lib/reference-shared";
 import { createClient } from "@/lib/supabase/server";
 
-type Result = { ok?: boolean; id?: string; error?: string };
+type ReferenceActionResult = { ok?: boolean; id?: string; error?: string };
 
 type RawInput = { category: string; title: string; academicYear: string };
 
@@ -20,7 +20,7 @@ function message(cause: unknown): string {
 }
 
 /** เพิ่มรายการเอกสารอ้างอิง — ไฟล์ตามมาทีหลังจากเบราว์เซอร์ทีละไฟล์ */
-export async function createReferenceDocument(raw: RawInput): Promise<Result> {
+export async function createReferenceDocument(raw: RawInput): Promise<ReferenceActionResult> {
   const parsed = parseReferenceInput(raw);
   if ("error" in parsed) return { error: parsed.error };
 
@@ -41,7 +41,7 @@ export async function createReferenceDocument(raw: RawInput): Promise<Result> {
   return { ok: true, id: data.id };
 }
 
-export async function updateReferenceDocument(id: string, raw: RawInput): Promise<Result> {
+export async function updateReferenceDocument(id: string, raw: RawInput): Promise<ReferenceActionResult> {
   const parsed = parseReferenceInput(raw);
   if ("error" in parsed) return { error: parsed.error };
 
@@ -67,7 +67,7 @@ export async function updateReferenceDocument(id: string, raw: RawInput): Promis
 export async function recordReferenceFile(
   documentId: string,
   file: { storagePath: string; fileName: string; mimeType: string; sizeBytes: number },
-): Promise<Result> {
+): Promise<ReferenceActionResult> {
   if (!isOwnedStoragePath(documentId, file.storagePath)) {
     return { error: "ที่อยู่ไฟล์ไม่ถูกต้อง" };
   }
@@ -107,7 +107,7 @@ export async function openReferenceFile(fileId: string): Promise<{ url?: string;
  * ลบไฟล์ใน storage ก่อน แล้วค่อยลบแถว: ถ้าลบไฟล์ไม่ได้ต้องหยุด ไม่งั้นแถวหายแต่ไฟล์ค้างเป็นกำพร้า
  * Supabase ไม่ error เมื่อ RLS กันการลบ แต่คืนรายการว่าง — จึงต้องนับว่าลบได้ครบจริง
  */
-export async function deleteReferenceDocument(id: string): Promise<Result> {
+export async function deleteReferenceDocument(id: string): Promise<ReferenceActionResult> {
   // บอกเหตุผลให้ตรงก่อนเริ่ม — policy ยังกันซ้ำอีกชั้นถ้ามีคนเรียกตรง
   if (!(await isTeamLead())) return { error: "ลบได้เฉพาะหัวหน้าทีม" };
 

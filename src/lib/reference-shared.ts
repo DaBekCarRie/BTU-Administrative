@@ -1,4 +1,5 @@
 import { Constants, type Enums } from "@/types/database";
+import { firstParam } from "@/lib/search-params";
 
 /** หมวดของเอกสารอ้างอิง — ค่าคงที่ ห้ามพิมพ์เอง (CLAUDE.md กฎข้อ 4) */
 export const REFERENCE_CATEGORIES = Constants.public.Enums.reference_category;
@@ -20,6 +21,10 @@ export type ReferenceInput = {
 
 const TITLE_MAX = 200;
 
+/** ช่วงปี พ.ศ. ที่ยอมรับ — ตรงกับ check constraint ของตาราง */
+const ACADEMIC_YEAR_MIN = 2500;
+const ACADEMIC_YEAR_MAX = 2700;
+
 /** ตรวจค่าที่กรอก ใช้ทั้งฝั่งฟอร์มและฝั่งเซิร์ฟเวอร์ */
 export function parseReferenceInput(raw: {
   category?: string | null;
@@ -39,7 +44,7 @@ export function parseReferenceInput(raw: {
   let academicYear: number | null = null;
   if (yearText) {
     academicYear = Number(yearText);
-    if (!Number.isInteger(academicYear) || academicYear < 2500 || academicYear > 2700) {
+    if (!Number.isInteger(academicYear) || academicYear < ACADEMIC_YEAR_MIN || academicYear > ACADEMIC_YEAR_MAX) {
       return { error: "ปีการศึกษาต้องเป็นปี พ.ศ. เช่น 2569" };
     }
   }
@@ -67,30 +72,30 @@ export function isOwnedStoragePath(documentId: string, storagePath: string): boo
 
 export type ReferenceFilters = {
   q: string;
-  category: string;
+  category: ReferenceCategory | "";
   /** ปี พ.ศ. · "none" = ไม่ผูกกับปี · "" = ทุกปี */
   year: string;
 };
 
 const SEARCH_MAX = 100;
 
-function one(value: string | string[] | undefined): string {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 /** แปลง query string เป็นตัวกรอง — ค่าที่ไม่รู้จักถูกทิ้ง ไม่ใช่ส่งต่อไปที่ฐานข้อมูล */
 export function parseReferenceFilters(
   params: Record<string, string | string[] | undefined>,
 ): ReferenceFilters {
-  const category = one(params.category);
-  const year = one(params.year);
+  const category = firstParam(params.category);
+  const year = firstParam(params.year);
   const yearNumber = Number(year);
 
   return {
-    q: one(params.q).slice(0, SEARCH_MAX),
-    category: (REFERENCE_CATEGORIES as readonly string[]).includes(category) ? category : "",
+    q: firstParam(params.q).slice(0, SEARCH_MAX),
+    category: (REFERENCE_CATEGORIES as readonly string[]).includes(category)
+      ? (category as ReferenceCategory)
+      : "",
     year:
-      year === "none" || (Number.isInteger(yearNumber) && yearNumber >= 2500 && yearNumber <= 2700)
+      year === "none" ||
+      (Number.isInteger(yearNumber) && yearNumber >= ACADEMIC_YEAR_MIN && yearNumber <= ACADEMIC_YEAR_MAX)
         ? year
         : "",
   };

@@ -59,17 +59,14 @@ function getInitials(name: string): string {
   return clean.slice(0, 2);
 }
 
+const SUBTITLE = "ทีม LMS · มกธ.";
+
+/** ชื่อหน้ามาจากรายการเมนูที่เดียว เพิ่มหน้าใหม่ไม่ต้องแก้สองที่ */
 function getPageTitle(pathname: string): { title: string; subtitle: string } {
-  if (pathname === "/") return { title: "หน้าแรก", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/queue")) return { title: "คิวโทรวันนี้", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/leads")) return { title: "ผู้สนใจ", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/documents")) return { title: "เอกสาร", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/reference")) return { title: "เอกสารอ้างอิง", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/exams")) return { title: "ศูนย์สอบพิเศษ", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/faq")) return { title: "คำถามที่พบบ่อย", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/master-data")) return { title: "ข้อมูลหลัก (คณะ/สาขา)", subtitle: "ทีม LMS · มกธ." };
-  if (pathname.startsWith("/access-log")) return { title: "ร่องรอยการเข้าถึง", subtitle: "ทีม LMS · มกธ." };
-  return { title: "BTU Administrative", subtitle: "ทีม LMS · มกธ." };
+  const item = [...MAIN_NAV, ...SECONDARY_NAV].find(({ href }) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`),
+  );
+  return { title: item?.label ?? "BTU Administrative", subtitle: SUBTITLE };
 }
 
 export function AppShell({

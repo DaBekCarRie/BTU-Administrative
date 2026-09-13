@@ -2,7 +2,6 @@ import "server-only";
 
 import type { FunnelFilters } from "@/lib/data/funnel-filters";
 import { monthRangeBangkok } from "@/lib/date";
-import type { Enums } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 
 /** ขั้นของกรวย เรียงตามลำดับที่คนเดินผ่าน */
@@ -29,7 +28,7 @@ async function funnelFor(offsetMonths: number, filters: FunnelFilters): Promise<
       p_from: from,
       p_to: to,
       p_faculty_id: filters.facultyId || undefined,
-      p_study_mode: (filters.studyMode || undefined) as Enums<"study_mode"> | undefined,
+      p_study_mode: filters.studyMode || undefined,
     })
     .single();
   if (error) throw new Error(`อ่านกรวยการรับสมัครไม่สำเร็จ: ${error.message}`);

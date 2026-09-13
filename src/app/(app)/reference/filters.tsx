@@ -72,7 +72,8 @@ export function ReferenceFiltersBar({ filters }: { filters: ReferenceFilters }) 
           id="reference-filter-category"
           className={selectClass}
           value={filters.category}
-          onChange={(event) => update({ category: event.target.value })}
+          // ค่ามาจากตัวเลือกที่สร้างจาก enum ข้างล่างเท่านั้น
+          onChange={(event) => update({ category: event.target.value as ReferenceFilters["category"] })}
         >
           <option value="">ทุกหมวด</option>
           {REFERENCE_CATEGORIES.map((category) => (
