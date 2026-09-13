@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { uniqueName } from "./helpers";
+import { hasCredentials, signedInClient, STORAGE } from "./identities";
 
 const PNG = "e2e/fixtures/doc.png";
 const PDF = "e2e/fixtures/doc.pdf";
@@ -167,6 +168,35 @@ test.describe("เอกสารอ้างอิง", () => {
     });
     const after = await client.storage.from("reference").list(id!);
     expect(after.data ?? []).toEqual([]);
+  });
+
+  test.describe("เจ้าหน้าที่ที่ไม่ใช่หัวหน้าทีม", () => {
+    test.skip(!hasCredentials("staff"), "รัน npm run e2e:accounts ก่อน");
+    test.use({ storageState: STORAGE.staff });
+
+    test("เพิ่มและแก้ได้ แต่ไม่เห็นปุ่มลบเลย", async ({ page }) => {
+      const title = uniqueName("เจ้าหน้าที่เพิ่ม");
+      const item = await addReference(page, { title, category: "แบบฟอร์ม", files: [PNG] });
+      await expect(item).toBeVisible();
+      await expect(item.getByTestId("edit-reference")).toBeVisible();
+      // ไม่มีปุ่มเลย ไม่ใช่ปุ่มสีจางกดไม่ได้
+      await expect(item.getByTestId("delete-reference")).toHaveCount(0);
+    });
+
+    test("เรียกลบตรงที่ฐานข้อมูลก็ถูกปฏิเสธ รายการยังอยู่", async ({ page }) => {
+      const title = uniqueName("ลบตรงไม่ได้");
+      const item = await addReference(page, { title, category: "ประกาศ", files: [] });
+      const id = await item.getAttribute("data-reference-id");
+
+      const staff = await signedInClient("staff");
+      const { data: deleted, error } = await staff.from("reference_documents").delete().eq("id", id!).select("id");
+      // RLS ไม่ error แต่กรองจนไม่มีแถวให้ลบ
+      expect(error ?? null).toBeNull();
+      expect(deleted).toEqual([]);
+
+      const { data: still } = await staff.from("reference_documents").select("id").eq("id", id!);
+      expect(still).toHaveLength(1);
+    });
   });
 
   test.describe("มือถือ", () => {

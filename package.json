@@ -17,7 +17,8 @@
     "db:rebuild": "tsx scripts/rebuild-people.mts",
     "db:verify": "tsx scripts/rebuild-people.mts --check",
     "import:leads": "tsx scripts/import-leads.mts",
-    "mock:leads": "tsx scripts/mock-leads-csv.mts"
+    "mock:leads": "tsx scripts/mock-leads-csv.mts",
+    "e2e:accounts": "tsx scripts/setup-test-accounts.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

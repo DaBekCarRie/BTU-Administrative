@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+import { hasCredentials, signedInClient } from "./identities";
 
 /**
  * spec: "RLS: ผู้ใช้ที่ยังไม่ล็อกอินเรียก API ตรง ๆ ต้องไม่ได้ข้อมูลเลย — เส้นที่ห้ามพลาด"
@@ -70,5 +72,88 @@ test.describe("RLS — ยังไม่ล็อกอินต้องไม
     const { data, error } = await anon().storage.from("documents").list();
     // Supabase คืน [] หรือ error แล้วแต่เวอร์ชัน — ที่ห้ามคือมีชื่อไฟล์หลุดออกมา
     expect(error ?? (data ?? []).length === 0).toBeTruthy();
+  });
+});
+
+/**
+ * ADR-0005: ล็อกอินได้ไม่ได้แปลว่าเป็นเจ้าหน้าที่ — ใครก็สมัครผ่าน Google ได้
+ * เคยพิสูจน์บนฐานข้อมูลจริงว่าบัญชีที่ไม่มีแถวเจ้าหน้าที่อ่านคนได้หลายพันราย
+ * ไฟล์นี้ยิงตรงเข้า PostgREST ด้วย token ของบัญชีคนนอกทีม ไม่ผ่านแอปเลย
+ */
+test.describe("RLS — ล็อกอินแล้วแต่ไม่ใช่เจ้าหน้าที่ต้องไม่ได้อะไรเลย", () => {
+  // ล็อกอินครั้งเดียวทั้งกลุ่ม ไม่งั้นแต่ละเทสต์ล็อกอินเองจนชน rate limit
+  test.describe.configure({ mode: "serial" });
+  test.skip(!hasCredentials("outsider"), "รัน npm run e2e:accounts ก่อน");
+
+  let outsider: SupabaseClient;
+  test.beforeAll(async () => {
+    outsider = await signedInClient("outsider");
+  });
+
+  for (const table of [
+    "people",
+    "events",
+    "documents",
+    "document_access_log",
+    "applications",
+    "payments",
+    "staff",
+    "answers",
+    "exam_center_requests",
+    "merged_people",
+    "faculties",
+    "programs",
+    "reference_documents",
+    "reference_document_files",
+  ] as const) {
+    test(`ตาราง ${table} คืนว่างเปล่า`, async () => {
+      const { data, error } = await outsider.from(table).select("*").limit(1);
+      expect(error ?? null).toBeNull();
+      expect(data).toEqual([]);
+    });
+  }
+
+  test("view คิวโทรคืนว่างเปล่า", async () => {
+    const { data } = await outsider.from("people_with_call_summary").select("id").limit(1);
+    expect(data).toEqual([]);
+  });
+
+  test("เขียนตารางไม่ได้", async () => {
+    const { error } = await outsider.from("answers").insert({ question: "probe", answer: "probe" });
+    expect(error).not.toBeNull();
+  });
+
+  test("ฟังก์ชันที่เขียนหรือถอดรหัสข้อมูลคนถูกปฏิเสธ", async () => {
+    const nobody = "00000000-0000-0000-0000-000000000000";
+    const writes = await Promise.all([
+      outsider.rpc("record_event", {
+        p_person_id: nobody,
+        p_type: "ติดต่อเข้ามา",
+        p_occurred_at: new Date().toISOString(),
+        p_payload: {},
+        p_state: {},
+      }),
+      outsider.rpc("read_national_id", { p_person_id: nobody }),
+      outsider.rpc("set_national_id", { p_person_id: nobody, p_national_id: "1234567890123" }),
+      outsider.rpc("merge_people", { p_survivor_id: nobody, p_merged_id: nobody, p_details: {} }),
+    ]);
+    for (const { error } of writes) expect(error).not.toBeNull();
+  });
+
+  test("ฟังก์ชันนับตัวเลขคืนศูนย์ ไม่รั่วจำนวนคนออกมา", async () => {
+    const { data: queue } = await outsider.rpc("document_desk_queue", { p_limit: 10 });
+    expect(queue ?? []).toEqual([]);
+
+    const { data: funnel } = await outsider
+      .rpc("application_funnel", { p_from: "2000-01-01T00:00:00Z", p_to: "2100-01-01T00:00:00Z" })
+      .single();
+    expect(Object.values(funnel ?? {}).every((n) => Number(n) === 0)).toBe(true);
+  });
+
+  test("bucket ทั้งสองเปิดรายการไฟล์ไม่ได้", async () => {
+    for (const bucket of ["documents", "reference"]) {
+      const { data, error } = await outsider.storage.from(bucket).list();
+      expect(error ?? (data ?? []).length === 0).toBeTruthy();
+    }
   });
 });

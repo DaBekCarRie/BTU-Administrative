@@ -62,7 +62,8 @@ test.describe("เข้าสู่ระบบ", () => {
     await page.getByLabel("รหัสผ่าน").fill(PASSWORD!);
     await page.getByLabel("รหัสผ่าน").press("Enter");
 
-    await expect(page).toHaveURL(/\/queue/);
+    // ล็อกอิน → redirect → render คิวโทร ช้ากว่า 5 วินาทีได้ตอนรันขนาน (เหมือนตัวตั้งต้นใน auth.setup)
+    await expect(page).toHaveURL(/\/queue/, { timeout: 20_000 });
   });
 
   test("รหัสผ่านผิดขึ้นข้อความบอก และไม่ได้เข้าระบบ", async ({ page }) => {
