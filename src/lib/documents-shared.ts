@@ -12,6 +12,7 @@ export const DOC_TYPE_SLUG: Record<DocType, string> = {
   วุฒิการศึกษา: "transcript",
   สำเนาบัตรประชาชน: "national-id",
   สำเนาทะเบียนบ้าน: "house-registration",
+  ใบสมัคร: "application-form",
 };
 
 /** เอกสารที่ต้องกดเปิดและถูกบันทึก log ทุกครั้ง */

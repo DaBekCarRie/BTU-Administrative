@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -64,13 +64,18 @@ export type Database = {
       applications: {
         Row: {
           academic_year: number
+          applied_at: string | null
+          box_set_state: Database["public"]["Enums"]["box_set_state"]
           created_at: string
+          degree_level: Database["public"]["Enums"]["degree_level"] | null
           faculty_id: string | null
+          funding_type: Database["public"]["Enums"]["funding_type"] | null
           id: string
           note: string | null
           person_id: string
           prior_education: Database["public"]["Enums"]["prior_education"] | null
           program_id: string | null
+          shirt_size: Database["public"]["Enums"]["shirt_size"] | null
           status: Database["public"]["Enums"]["application_status"]
           student_code: string | null
           study_mode: Database["public"]["Enums"]["study_mode"] | null
@@ -79,8 +84,12 @@ export type Database = {
         }
         Insert: {
           academic_year: number
+          applied_at?: string | null
+          box_set_state?: Database["public"]["Enums"]["box_set_state"]
           created_at?: string
+          degree_level?: Database["public"]["Enums"]["degree_level"] | null
           faculty_id?: string | null
+          funding_type?: Database["public"]["Enums"]["funding_type"] | null
           id?: string
           note?: string | null
           person_id: string
@@ -88,6 +97,7 @@ export type Database = {
             | Database["public"]["Enums"]["prior_education"]
             | null
           program_id?: string | null
+          shirt_size?: Database["public"]["Enums"]["shirt_size"] | null
           status?: Database["public"]["Enums"]["application_status"]
           student_code?: string | null
           study_mode?: Database["public"]["Enums"]["study_mode"] | null
@@ -96,8 +106,12 @@ export type Database = {
         }
         Update: {
           academic_year?: number
+          applied_at?: string | null
+          box_set_state?: Database["public"]["Enums"]["box_set_state"]
           created_at?: string
+          degree_level?: Database["public"]["Enums"]["degree_level"] | null
           faculty_id?: string | null
+          funding_type?: Database["public"]["Enums"]["funding_type"] | null
           id?: string
           note?: string | null
           person_id?: string
@@ -105,6 +119,7 @@ export type Database = {
             | Database["public"]["Enums"]["prior_education"]
             | null
           program_id?: string | null
+          shirt_size?: Database["public"]["Enums"]["shirt_size"] | null
           status?: Database["public"]["Enums"]["application_status"]
           student_code?: string | null
           study_mode?: Database["public"]["Enums"]["study_mode"] | null
@@ -146,7 +161,9 @@ export type Database = {
         Row: {
           document_id: string | null
           id: number
+          kind: string | null
           person_id: string
+          source: string | null
           viewed_at: string
           viewed_by: string | null
           what: string
@@ -154,7 +171,9 @@ export type Database = {
         Insert: {
           document_id?: string | null
           id?: never
+          kind?: string | null
           person_id: string
+          source?: string | null
           viewed_at?: string
           viewed_by?: string | null
           what: string
@@ -162,7 +181,9 @@ export type Database = {
         Update: {
           document_id?: string | null
           id?: never
+          kind?: string | null
           person_id?: string
+          source?: string | null
           viewed_at?: string
           viewed_by?: string | null
           what?: string
@@ -203,6 +224,7 @@ export type Database = {
           application_id: string | null
           created_at: string
           doc_type: Database["public"]["Enums"]["doc_type"]
+          file_size: number | null
           id: string
           person_id: string
           reject_reason: string | null
@@ -217,6 +239,7 @@ export type Database = {
           application_id?: string | null
           created_at?: string
           doc_type: Database["public"]["Enums"]["doc_type"]
+          file_size?: number | null
           id?: string
           person_id: string
           reject_reason?: string | null
@@ -231,6 +254,7 @@ export type Database = {
           application_id?: string | null
           created_at?: string
           doc_type?: Database["public"]["Enums"]["doc_type"]
+          file_size?: number | null
           id?: string
           person_id?: string
           reject_reason?: string | null
@@ -339,7 +363,9 @@ export type Database = {
           id: string
           note: string | null
           person_id: string
+          province: string | null
           status: Database["public"]["Enums"]["exam_request_status"]
+          submitted_at: string | null
           updated_at: string
         }
         Insert: {
@@ -349,7 +375,9 @@ export type Database = {
           id?: string
           note?: string | null
           person_id: string
+          province?: string | null
           status?: Database["public"]["Enums"]["exam_request_status"]
+          submitted_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -359,7 +387,9 @@ export type Database = {
           id?: string
           note?: string | null
           person_id?: string
+          province?: string | null
           status?: Database["public"]["Enums"]["exam_request_status"]
+          submitted_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -502,6 +532,10 @@ export type Database = {
       }
       people: {
         Row: {
+          address_id_card: string | null
+          address_shipping: string | null
+          birth_date: string | null
+          conflict_ack: Json | null
           created_at: string
           credit_balance: number
           enrollment_status: Database["public"]["Enums"]["enrollment_status"]
@@ -525,10 +559,17 @@ export type Database = {
           phone: string | null
           prior_education: Database["public"]["Enums"]["prior_education"] | null
           program_id: string | null
+          source: Database["public"]["Enums"]["lead_source"] | null
+          stage: Database["public"]["Enums"]["person_stage"]
           study_mode: Database["public"]["Enums"]["study_mode"] | null
+          title: Database["public"]["Enums"]["title_prefix"] | null
           updated_at: string
         }
         Insert: {
+          address_id_card?: string | null
+          address_shipping?: string | null
+          birth_date?: string | null
+          conflict_ack?: Json | null
           created_at?: string
           credit_balance?: number
           enrollment_status?: Database["public"]["Enums"]["enrollment_status"]
@@ -554,10 +595,17 @@ export type Database = {
             | Database["public"]["Enums"]["prior_education"]
             | null
           program_id?: string | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          stage?: Database["public"]["Enums"]["person_stage"]
           study_mode?: Database["public"]["Enums"]["study_mode"] | null
+          title?: Database["public"]["Enums"]["title_prefix"] | null
           updated_at?: string
         }
         Update: {
+          address_id_card?: string | null
+          address_shipping?: string | null
+          birth_date?: string | null
+          conflict_ack?: Json | null
           created_at?: string
           credit_balance?: number
           enrollment_status?: Database["public"]["Enums"]["enrollment_status"]
@@ -583,7 +631,10 @@ export type Database = {
             | Database["public"]["Enums"]["prior_education"]
             | null
           program_id?: string | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          stage?: Database["public"]["Enums"]["person_stage"]
           study_mode?: Database["public"]["Enums"]["study_mode"] | null
+          title?: Database["public"]["Enums"]["title_prefix"] | null
           updated_at?: string
         }
         Relationships: [
@@ -969,8 +1020,15 @@ export type Database = {
         | "รอตรวจสอบ"
         | "อนุมัติ"
         | "ยกเลิก"
+      box_set_state: "ยังไม่ส่ง" | "ส่งแล้ว" | "รับเองที่มหาวิทยาลัย"
+      degree_level: "ปริญญาตรี" | "ปริญญาโท" | "ปริญญาเอก"
       doc_status: "ส่งแล้ว" | "ผ่าน" | "ไม่ผ่าน"
-      doc_type: "รูปถ่าย" | "วุฒิการศึกษา" | "สำเนาบัตรประชาชน" | "สำเนาทะเบียนบ้าน"
+      doc_type:
+        | "รูปถ่าย"
+        | "วุฒิการศึกษา"
+        | "สำเนาบัตรประชาชน"
+        | "สำเนาทะเบียนบ้าน"
+        | "ใบสมัคร"
       enrollment_status: "ยังไม่เริ่ม" | "เรียนอยู่" | "ดรอป" | "ลาออก" | "จบแล้ว"
       event_type:
         | "ติดต่อเข้ามา"
@@ -990,6 +1048,9 @@ export type Database = {
         | "แก้ไขข้อมูล"
         | "รวมข้อมูล"
         | "ยืนยันสถานะ"
+        | "เปลี่ยนขั้น"
+        | "รับทราบว่าขั้นไม่ตรง"
+        | "ยกเลิกใบสมัคร"
       exam_request_status: "ขอแล้ว" | "ยืนยันแล้ว" | "ถอนแล้ว"
       follow_up_status:
         | "ใหม่"
@@ -999,7 +1060,16 @@ export type Database = {
         | "สมัครแล้ว"
         | "ไม่สนใจ"
         | "ติดต่อไม่ได้"
+      funding_type: "ชำระตรง" | "กู้ กยศ."
+      lead_source:
+        | "Facebook"
+        | "LINE"
+        | "Walk in"
+        | "โทรเข้า"
+        | "แนะนำต่อ"
+        | "อื่นๆ"
       payment_status: "ยังไม่ชำระ" | "ผ่อนอยู่" | "รักษาสภาพ" | "ชำระครบ"
+      person_stage: "ผู้สนใจ" | "นักศึกษา" | "ปิดแฟ้ม"
       prior_education:
         | "ม.6"
         | "กศน.เทียบเท่า ม.6"
@@ -1014,7 +1084,9 @@ export type Database = {
         | "ประกาศ"
         | "สื่อประชาสัมพันธ์"
         | "อื่นๆ"
+      shirt_size: "S" | "M" | "L" | "XL" | "2XL" | "3XL"
       study_mode: "ปกติ" | "สมทบ" | "ทางไกล"
+      title_prefix: "นาย" | "นาง" | "นางสาว" | "พระ"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1151,8 +1223,16 @@ export const Constants = {
         "อนุมัติ",
         "ยกเลิก",
       ],
+      box_set_state: ["ยังไม่ส่ง", "ส่งแล้ว", "รับเองที่มหาวิทยาลัย"],
+      degree_level: ["ปริญญาตรี", "ปริญญาโท", "ปริญญาเอก"],
       doc_status: ["ส่งแล้ว", "ผ่าน", "ไม่ผ่าน"],
-      doc_type: ["รูปถ่าย", "วุฒิการศึกษา", "สำเนาบัตรประชาชน", "สำเนาทะเบียนบ้าน"],
+      doc_type: [
+        "รูปถ่าย",
+        "วุฒิการศึกษา",
+        "สำเนาบัตรประชาชน",
+        "สำเนาทะเบียนบ้าน",
+        "ใบสมัคร",
+      ],
       enrollment_status: ["ยังไม่เริ่ม", "เรียนอยู่", "ดรอป", "ลาออก", "จบแล้ว"],
       event_type: [
         "ติดต่อเข้ามา",
@@ -1172,6 +1252,9 @@ export const Constants = {
         "แก้ไขข้อมูล",
         "รวมข้อมูล",
         "ยืนยันสถานะ",
+        "เปลี่ยนขั้น",
+        "รับทราบว่าขั้นไม่ตรง",
+        "ยกเลิกใบสมัคร",
       ],
       exam_request_status: ["ขอแล้ว", "ยืนยันแล้ว", "ถอนแล้ว"],
       follow_up_status: [
@@ -1183,7 +1266,10 @@ export const Constants = {
         "ไม่สนใจ",
         "ติดต่อไม่ได้",
       ],
+      funding_type: ["ชำระตรง", "กู้ กยศ."],
+      lead_source: ["Facebook", "LINE", "Walk in", "โทรเข้า", "แนะนำต่อ", "อื่นๆ"],
       payment_status: ["ยังไม่ชำระ", "ผ่อนอยู่", "รักษาสภาพ", "ชำระครบ"],
+      person_stage: ["ผู้สนใจ", "นักศึกษา", "ปิดแฟ้ม"],
       prior_education: [
         "ม.6",
         "กศน.เทียบเท่า ม.6",
@@ -1200,7 +1286,9 @@ export const Constants = {
         "สื่อประชาสัมพันธ์",
         "อื่นๆ",
       ],
+      shirt_size: ["S", "M", "L", "XL", "2XL", "3XL"],
       study_mode: ["ปกติ", "สมทบ", "ทางไกล"],
+      title_prefix: ["นาย", "นาง", "นางสาว", "พระ"],
     },
   },
 } as const

@@ -105,6 +105,12 @@ function describe(
       return `ไป ${payload.toAcademicYear}${payload.toTerm ? `/${payload.toTerm}` : ""}`;
     case "ยืนยันสถานะ":
       return `ยืนยันสถานะ${payload.dimension}`;
+    case "เปลี่ยนขั้น":
+      return [`เป็น ${payload.to}`, payload.reason].filter(Boolean).join(" · ");
+    case "รับทราบว่าขั้นไม่ตรง":
+      return [`ขั้น ${payload.stage}`, payload.reason].filter(Boolean).join(" · ");
+    case "ยกเลิกใบสมัคร":
+      return payload.reason ? `เหตุผล: ${payload.reason}` : "ยกเลิกใบสมัคร";
     case "ขอศูนย์สอบพิเศษ":
     case "ถอนคำขอศูนย์สอบ":
       return `ศูนย์${payload.centerName}`;
